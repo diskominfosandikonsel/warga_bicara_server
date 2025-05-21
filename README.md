@@ -1,3 +1,3 @@
 # warga_bicara_server
 
-Pakai node 18.20.0
+Pakai node versi 18.20.0
