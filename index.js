@@ -3,12 +3,11 @@ const express = require('express')
 const volleyball = require('volleyball');
 const cors = require('cors');
 var path = require("path");
-
+const middleware = require('./auth/middleware');
 
 const app = express()
 const port = 3000
-app.use(express.json()); // ⬅️ Ini wajib
-
+app.use(express.json()); // ⬅️ Ini wajib 
 app.use(volleyball);
 
 // app.use(cors({ origin : '*' })); 
@@ -39,17 +38,35 @@ const {connectMongo} = require('./db/mongodb/connection')
 
 
 
+app.use(middleware.checkTokenSeetUser);
 
 app.get('/', async (req, res) => { 
-    const db = await connectMongo() //konek ke database
-    const users = db.collection('users'); //memilih collection yang mau di query
-    const data = await users.find().toArray(); //query data
-    console.log('📦 Data pengguna:', data);
-    res.send(data)  
+    // const db = await connectMongo() //konek ke database
+    // const users = db.collection('users'); //memilih collection yang mau di query
+    // const data = await users.find().toArray(); //query data
+    // console.log('📦 Data pengguna:', data);
+    // res.send(data)  
+    res.send(JSON.stringify({
+      message:"👌"
+    }))  
 })
 
-const reg_masyarakat = require('./api/auth/registration_masyarakat');
-app.use('/api/v1/reg_masyarakat', reg_masyarakat);
+
+
+
+
+const regMsyarakat = require('./api/auth/registration_masyarakat');
+app.use('/api/v1/reg_masyarakat', regMsyarakat);                        //REGIS MASYARAKAT
+
+const routeAuth = require('./auth/login');
+app.use('/api/v1/auth', routeAuth);
+
+
+const checkAuth = require('./auth/cekMidleware');
+app.use('/checkAuth', middleware.isLoggedIn, checkAuth);
+
+const registration = require('./auth/registration');
+app.use('/registration', middleware.isLoggedIn, registration);          //REGIS ADMIN
 
 
 

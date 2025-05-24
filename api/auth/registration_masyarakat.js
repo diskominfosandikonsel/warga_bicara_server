@@ -5,6 +5,8 @@ const uniqid =  require('uniqid');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs');
 
+const {getCollection} = require('../../db/mongodb/controller')
+
 const schema = Joi.object().keys({
     username: Joi.string()
                 .alphanum() // hanya huruf dan angka 
@@ -44,12 +46,10 @@ router.post('/signup', async (req, res) => {
     } else {
         
 
-        const db = await connectMongo() //konek ke database
-        const users = db.collection('users'); //memilih collection yang mau di query
-        const result = await users.find({"username":req.body.username}).toArray(); //query cari data
-
-        console.log('📦 Data pengguna:', result.length);
-        console.log(result.length);
+ 
+        const users = await getCollection('users'); //memilih collection yang mau di query
+        const result = users.find({"username":req.body.username}).toArray(); //query cari data
+        
 
         if (result.length <= 0 ) {
             console.log("ayo Insert");
