@@ -10,13 +10,13 @@ const {getCollection} = require('../../db/mongodb/controller')
 const schema = Joi.object().keys({
     username: Joi.string()
                 .alphanum() // hanya huruf dan angka 
-                .min(5)
-                .max(20)
+                .min(6)
+                .max(13)
                 .required()
                 .messages({
                     'string.alphanum': 'Username hanya boleh berisi huruf dan angka (tanpa simbol).',
-                    'string.min': 'Username minimal 5 karakter.',
-                    'string.max': 'Username maksimal 20 karakter.',
+                    'string.min': 'Username minimal 6 karakter.',
+                    'string.max': 'Username maksimal 13 karakter.',
                     'any.required': 'Username wajib diisi.',
                 }),
     password: Joi.string()
@@ -34,7 +34,15 @@ const schema = Joi.object().keys({
 }); 
  
 
-router.post('/signup', async (req, res) => { 
+
+  router.post('/signup', async (req, res) => { 
+
+    console.log('data dari frontend:', { 
+        ...req.body, 
+        password: '*****', 
+        confirmPassword: '*****' 
+      });
+
     const request = {
         username: req.body.username,
         password: req.body.password,
@@ -48,7 +56,10 @@ router.post('/signup', async (req, res) => {
 
  
         const users = await getCollection('users'); //memilih collection yang mau di query
-        const result = users.find({"username":req.body.username}).toArray(); //query cari data
+        const result = await users.find({
+            "username"  :req.body.username,
+            "nik"       :req.body.nik
+        }).toArray(); //query cari data
         
 
         if (result.length <= 0 ) {
@@ -84,7 +95,9 @@ router.post('/signup', async (req, res) => {
                     const results = await users.insertOne(form)
                     if (results.acknowledged) {  // results.acknowledged Hasilnya true / false
                         console.log("Berhasil Menambahkan User " + req.body.username);
-                        res.status(201).json({message: "Berhasil Menambahkan User " + req.body.username})
+                        res.status(201).json({
+                            success: true,
+                            message: "Berhasil Menambahkan User " + req.body.username})
                     } else {
                         console.log('Insert gagal '+err); 
                         res.status(500).json({message: "Insert Gagal "+err})

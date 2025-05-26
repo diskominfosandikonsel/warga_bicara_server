@@ -18,6 +18,7 @@ const allowedOrigins = [
 //   'http://localhost:3000',
 //   '*',
   'http://localhost:3000',
+  'http://10.0.2.2:3000', // untuk android emu
 ];
 
 app.use(cors({
@@ -91,3 +92,6 @@ app.use(errorHandler);
 
 
 app.listen(port, () => { console.log(`Example app listening on port ${port}`) })
+// app.listen(port, '0.0.0.0', () => {
+//   console.log(`Server running at http://0.0.0.0:${port}`);
+// });

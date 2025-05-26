@@ -32,6 +32,14 @@ const schema = Joi.object().keys({
 
 
 router.post('/signup', async (req, res, next) => {
+
+    console.log('data dari frontend:', { 
+        ...req.body, 
+        password: '*****', 
+        confirmPassword: '*****' 
+      });
+
+
     const request = {
         username: req.body.username,
         password: req.body.password,
@@ -45,10 +53,15 @@ router.post('/signup', async (req, res, next) => {
 
  
         const users = await getCollection('users'); //memilih collection yang mau di query
-        const result = users.find({"username":req.body.username}).toArray(); //query cari data
-        
-
-        if (result.length <= 0 ) {
+        // const result = users.find({"username":req.body.username}).toArray(); //query cari data
+        // if (result.length <= 0 ) {
+            const existingUser = await users.findOne({
+                $or: [
+                    { username: req.body.username },
+                    { nik: req.body.nik }
+                ]
+            });
+            if (!existingUser) {
             console.log("ayo Insert");
 
             bcrypt.hash(req.body.password.trim(), 12).then(async hashedPassword =>  {
@@ -81,7 +94,7 @@ router.post('/signup', async (req, res, next) => {
                     const results = await users.insertOne(form)
                     if (results.acknowledged) {  // results.acknowledged Hasilnya true / false
                         console.log("Berhasil Menambahkan User " + req.body.username);
-                        res.status(201).json({message: "Berhasil Menambahkan User " + req.body.username})
+                        res.status(201).json({success: true, message: "Berhasil Menambahkan User " + req.body.username})
                     } else {
                         console.log('Insert gagal '+err); 
                         res.status(500).json({message: "Insert Gagal "+err})
@@ -95,9 +108,16 @@ router.post('/signup', async (req, res, next) => {
 
             
 
-        } else {
-            console.log("Jangan Insert");
-            res.status(409).json({message:"Gagal melakukan insert data. Data user sudah pernah ada."}) 
+        } 
+        // else {
+        //     console.log("Jangan Insert");
+        //     res.status(409).json({message:"Gagal melakukan insert data. Data user sudah pernah ada."}) 
+        // }
+        if (existingUser) {
+            let message = "Gagal insert data. ";
+            if (existingUser.username === req.body.username) message += "Username sudah digunakan. ";
+            if (existingUser.nik === req.body.nik) message += "NIK sudah terdaftar.";
+            return res.status(409).json({message});
         }
     
     }     
