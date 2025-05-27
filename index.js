@@ -4,7 +4,7 @@ const volleyball = require('volleyball');
 const cors = require('cors');
 var path = require("path");
 const middleware = require('./auth/middleware');
-
+const crypto = require('crypto')
 const app = express()
 const port = 3000
 app.use(express.json()); // ⬅️ Ini wajib 
@@ -39,6 +39,7 @@ const {connectMongo} = require('./db/mongodb/connection')
 
 
 
+
 app.use(middleware.checkTokenSeetUser);
 
 app.get('/', async (req, res) => { 
@@ -50,6 +51,31 @@ app.get('/', async (req, res) => {
     res.send(JSON.stringify({
       message:"👌"
     }))  
+})
+
+
+// GLOBAL VARIABEL
+global.SecretKey = 'ini sekret key';
+global.secretDuration = 0;
+
+// Function to generate a random 5-character string
+function buatRandomString(length) {
+    const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        const randomIndex = crypto.randomInt(0, characters.length);
+        result += characters[randomIndex];
+    }
+    return result;
+}
+
+var simpanSkey = buatRandomString(8)
+
+global.SecretKey = simpanSkey
+console.log(simpanSkey);
+
+app.get('/getSecretKey', async (req, res) => {
+  res.send(global.SecretKey)
 })
 
 
