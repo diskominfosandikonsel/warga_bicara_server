@@ -38,16 +38,11 @@ app.use(cors({
 const {connectMongo} = require('./db/mongodb/connection')
 
 
-
+const {getCollection} = require('./db/mongodb/controller')
 
 app.use(middleware.checkTokenSeetUser);
 
 app.get('/', async (req, res) => { 
-    // const db = await connectMongo() //konek ke database
-    // const users = db.collection('users'); //memilih collection yang mau di query
-    // const data = await users.find().toArray(); //query data
-    // console.log('📦 Data pengguna:', data);
-    // res.send(data)  
     res.send(JSON.stringify({
       message:"👌"
     }))  
@@ -58,23 +53,56 @@ app.get('/', async (req, res) => {
 global.SecretKey = 'ini sekret key';
 global.secretDuration = 0;
 
-// Function to generate a random 5-character string
-function buatRandomString(length) {
-    const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+// Function to generate a random 8-character string
+function buatSecretKey() {
+    const characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
     let result = '';
-    for (let i = 0; i < length; i++) {
+    for (let i = 0; i < 8; i++) { // 8 character
         const randomIndex = crypto.randomInt(0, characters.length);
         result += characters[randomIndex];
     }
-    return result;
+    global.SecretKey = result
+    console.log(global.SecretKey); 
 }
 
-var simpanSkey = buatRandomString(8)
 
-global.SecretKey = simpanSkey
-console.log(simpanSkey);
+
+// Fungsi Simpan Durasi ke Database
+async function saveSecretDuration(duration) { 
+  const db = await getCollection('durationSecretKey'); 
+  await db.deleteMany({})
+  await db.insertOne({"duration":duration}) 
+}
+
+app.post('/admin/set-duration', async (req, res) => {
+  const { duration } = req.body;
+  console.log(duration);
+  if (!duration) return res.status(400).json({ message: 'Duration required' });
+  await saveSecretDuration(duration);
+  res.json({ message: 'Duration Di Buat successfully' });
+});
+
+
+async function startSecretLoop() { 
+  const db = await getCollection('durationSecretKey');
+  const row = await db.findOne({}) 
+
+  if (row) {
+    console.log(row);
+    global.secretDuration = row.duration;
+    global.SecretKey = buatSecretKey();
+    setInterval(buatSecretKey, global.secretDuration * 60000);
+  }else{
+    console.log('else');
+    console.log(row);
+  } 
+
+}
+ 
 
 app.get('/getSecretKey', async (req, res) => {
+  console.log('getSecretKey ====> 🚀');
+  console.log(global.SecretKey);
   res.send(global.SecretKey)
 })
 
@@ -117,7 +145,10 @@ app.use(notFound);
 app.use(errorHandler);
 
 
-app.listen(port, () => { console.log(`Example app listening on port ${port}`) })
+app.listen(port, () => { 
+  console.log(`Example app listening on port ${port}`);
+  startSecretLoop();
+})
 // app.listen(port, '0.0.0.0', () => {
 //   console.log(`Server running at http://0.0.0.0:${port}`);
 // });
