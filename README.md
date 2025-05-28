@@ -15,6 +15,7 @@ Library 🔖
     uniqid         versi  5.4.0           
     volleyball     versi  1.5.1           
     bcryptjs       versi  3.0.2
+    crypto-js      versi  4.2.0
 
 Response Code
 

@@ -36,15 +36,7 @@ const schema = Joi.object().keys({
 
 
 
-router.get('/', async(req, res) => {
-    // const test = getUsers()
-
-    // const users = await getCollection('users')
-    // const hasil = await users.find({"username":req.body.username}).toArray()
-    // // console.log(await getUsers().find().toArray());
-    // // console.log(await users.find({"username":req.body.username}).toArray());
-    // console.log(hasil[0]);
-    // console.log("await getUsers()");
+router.get('/', async(req, res) => { 
     
     res.json({
         message: 'Router Login Check'

@@ -62,7 +62,9 @@ function buatSecretKey() {
         result += characters[randomIndex];
     }
     global.SecretKey = result
+    console.log("buat secret key"); 
     console.log(global.SecretKey); 
+    return result
 }
 
 
@@ -74,13 +76,7 @@ async function saveSecretDuration(duration) {
   await db.insertOne({"duration":duration}) 
 }
 
-app.post('/admin/set-duration', async (req, res) => {
-  const { duration } = req.body;
-  console.log(duration);
-  if (!duration) return res.status(400).json({ message: 'Duration required' });
-  await saveSecretDuration(duration);
-  res.json({ message: 'Duration Di Buat successfully' });
-});
+
 
 
 async function startSecretLoop() { 
@@ -93,35 +89,64 @@ async function startSecretLoop() {
     global.SecretKey = buatSecretKey();
     setInterval(buatSecretKey, global.secretDuration * 60000);
   }else{
-    console.log('else');
-    console.log(row);
+    console.log("Tidak ada duration secret key");
+    console.log("Silahkan set durasi secret key");
   } 
 
 }
  
 
-app.get('/getSecretKey', async (req, res) => {
-  console.log('getSecretKey ====> 🚀');
-  console.log(global.SecretKey);
-  res.send(global.SecretKey)
-})
 
 
 
 
+// API START HERE ==========================
+  app.get('/getSecretKey', async (req, res) => {
 
-const regMsyarakat = require('./api/auth/registration_masyarakat');
-app.use('/api/v1/reg_masyarakat', regMsyarakat);                        //REGIS MASYARAKAT
+      const db = await getCollection('durationSecretKey');
+      const row = await db.findOne({}) 
 
-const routeAuth = require('./auth/login');
-app.use('/api/v1/auth', routeAuth);
+      if (row) { 
+        console.log('getSecretKey ====> 🚀');
+        console.log(global.SecretKey);
+        res.send(global.SecretKey)
+      }else{
+        console.log("tidak ada isinya");
+        console.error("tidak ada isinya");
+        res.status(500).json("Silahkan tentukan waktu expire secretKey nya")
+      } 
+  })
+
+  app.post('/admin/set-duration', async (req, res) => {
+    const duration = req.body.duration;
+    console.log(duration);
+    if (!duration) return res.status(400).json({ message: 'Duration required' });
+    await saveSecretDuration(duration);
+    await startSecretLoop();
+    res.json({ message: 'Duration Di Buat successfully' });
+    process.exit(0); // aplikasi di stopkan lalu akan di restart secara otomatis oleh pm2
+    
+  });
 
 
-const checkAuth = require('./auth/cekMidleware');
-app.use('/checkAuth', middleware.isLoggedIn, checkAuth);
+  const regMsyarakat = require('./api/auth/registration_masyarakat');
+  app.use('/api/v1/reg_masyarakat', regMsyarakat);                        //REGIS MASYARAKAT
 
-const registration = require('./auth/registration');
-app.use('/registration', middleware.isLoggedIn, registration);          //REGIS ADMIN
+  const routeAuth = require('./auth/login');
+  app.use('/api/v1/auth', routeAuth);
+
+  const routeAuthMasyarakat = require('./api/auth/login_masyarakat');
+  app.use('/api/v1/authMasyarakat', routeAuthMasyarakat);
+
+
+  const checkAuth = require('./auth/cekMidleware');
+  app.use('/checkAuth', middleware.isLoggedIn, checkAuth);
+
+  const registration = require('./auth/registration');
+  app.use('/registration', middleware.isLoggedIn, registration);          //REGIS ADMIN
+// API START HERE ==========================
+
+
 
 
 
