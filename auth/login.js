@@ -6,6 +6,8 @@ const uniqid = require('uniqid');
 const {connectMongo} = require('../db/mongodb/connection')
 const {getCollection} = require('../db/mongodb/controller')
 
+const {decrypt, encrypt} = require('../library/encrypt/enkripsi')
+
 const router = express.Router();
 
 const schema = Joi.object().keys({
@@ -53,91 +55,100 @@ function respondError422(res, next, text) {
 
 
 router.post('/login', async (req, res, next) => {
+    
     console.log(req.body);
 
-        const request = {
-        username: req.body.username,
-        password: req.body.password,
-    }  
-    const { error, value } = schema.validate(request);
+      const request = {
+            username: await decrypt(req.body.username, global.SecretKey),
+            password: await decrypt(req.body.password, global.SecretKey),
+      }
+    
+      const { error, value } = schema.validate(request);
+        if (error) { 
+            res.status(409).json({message: error.details[0].message})
+    
+        } else {
+    
+            const users = await getCollection('users')
+            const result = await users.find({"username":request.username}).toArray(); //query cari data  
+    
+            if (result.length <= 0 ) {
+                console.log("Username Salah"); 
+                respondError422(res, next, "Username Salah");
+            } else {
+              console.log("User ditemukan");
+              console.log(result);
+              // res.send(result)
+              
+                          var user = {}
+                    for (var i in result) { user = result[i] }
+                    
+                    const payload = {
+                        _id                               : user._id,  
+                        id                                : user.id, 
+                        profile: {
+                            username                          : user.username, 
+                            password                          : user.password, 
+                            nama                              : user.nama,  
+                            alamat                            : user.alamat,  
+                            master_jk_id                      : user.master_jk_id, 
+                            tgl_lahir                         : user.tgl_lahir,  
+                            hp                                : user.hp, 
+                            nik                               : user.nik, 
+                            nip                               : user.nip,  
+                            email                             : user.email, 
+                            master_prov_id                    : user.master_prov_id, 
+                            master_kab_id                     : user.master_kab_id, 
+                            master_kec_id                     : user.master_kec_id, 
+                            master_deskel_id                  : user.master_deskel_id, 
+                            master_agama_id                   : user.master_agama_id, 
+                            master_pekerjaan_id               : user.master_pekerjaan_id, 
+                            master_pendidikan_id              : user.master_pendidikan_id, 
+                        },
+                        auth:{
+                            authorization                     : user.authorization, 
+                            kategori_user                     : user.kategori_user, 
+                            master_unit_kerja_id              : user.master_unit_kerja_id, 
+                        }
+                    };
+    
+                    console.log("Token_secret : ", process.env.TOKEN_SECRET);
+    
+                    bcrypt.compare(request.password, user.password).then(async (result) => {
+                        console.log(result);
+                        console.log("bcrypt");
+    
+                        if (result) {
+                                        jwt.sign(payload, process.env.TOKEN_SECRET, {
+                                            expiresIn: '24h'
+                                        }, (err, token) => {
+                                            if (err) {
+                                                respondError422(res, next, "Kesalahan dlm pembuatan token");
+                                            } else {
+                                              console.log("sudah berhasil kirim");
+                                              
+                                                res.json({
+                                                    token,
+                                                    profile: payload
+                                                });
+                                            }
+                                        })                        
+                        } else {
+                            // const users = await getCollection('users')
+                            // const result = await users.find({"username":request.username}).toArray(); //query cari data  
 
-    if (error) { 
-        // Jika skemanya salah
-        res.status(409).json({message: error.details[0].message})
-    } else { 
-
-        const users = await getCollection('users')
-        const result = await users.find({"username":req.body.username}).toArray(); //query cari data 
-        // console.log(result);
-        
-
-        if (result.length <= 0 ) {
-            console.log("ayo Login"); 
-            respondError422(res, next, "Username Salah");
-        }else{
-            // res.send('ditemukan')
-            var user = {}
-                for (var i in result) { user = result[i] }
-                
-                const payload = {
-                    _id                               : user._id,  
-                    id                                : user.id, 
-                    profile: {
-                        username                          : user.username, 
-                        password                          : user.password, 
-                        nama                              : user.nama,  
-                        alamat                            : user.alamat,  
-                        master_jk_id                      : user.master_jk_id, 
-                        tgl_lahir                         : user.tgl_lahir,  
-                        hp                                : user.hp, 
-                        nik                               : user.nik, 
-                        nip                               : user.nip,  
-                        email                             : user.email, 
-                        master_prov_id                    : user.master_prov_id, 
-                        master_kab_id                     : user.master_kab_id, 
-                        master_kec_id                     : user.master_kec_id, 
-                        master_deskel_id                  : user.master_deskel_id, 
-                        master_agama_id                   : user.master_agama_id, 
-                        master_pekerjaan_id               : user.master_pekerjaan_id, 
-                        master_pendidikan_id              : user.master_pendidikan_id, 
-                    },
-                    auth:{
-                        authorization                     : user.authorization, 
-                        kategori_user                     : user.kategori_user, 
-                        master_unit_kerja_id              : user.master_unit_kerja_id, 
-                    }
-                };
-
-                // console.log(payload);
-                console.log("Token_secret : ", process.env.TOKEN_SECRET);
-
-                bcrypt.compare(req.body.password, user.password).then((result) => {
-                    console.log(result);
-                    console.log("bcrypt");
-
-                    if (result) {
-                                    jwt.sign(payload, process.env.TOKEN_SECRET, {
-                                        expiresIn: '24h'
-                                    }, (err, token) => {
-                                        if (err) {
-                                            respondError422(res, next, "Kesalahan dlm pembuatan token");
-                                        } else {
-                                            res.json({
-                                                token,
-                                                profile: payload
-                                            });
-                                        }
-                                    })                        
-                    } else {
-                        respondError422(res, next, "Password salah");
-                    }
-
-                })
-                
-
+                            respondError422(res, next, "Password salah");
+                        }
+    
+                    })
+                    
+            }
+            
         }
-        
-    }
+      
+      
+
+
 });
 
 

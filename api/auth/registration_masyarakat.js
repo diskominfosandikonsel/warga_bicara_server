@@ -37,11 +37,7 @@ const schema = Joi.object().keys({
 
   router.post('/signup', async (req, res) => { 
 
-    console.log('data dari frontend:', { 
-        ...req.body, 
-        password: '*****', 
-        confirmPassword: '*****' 
-      });
+ 
 
     const request = {
         username: req.body.username,

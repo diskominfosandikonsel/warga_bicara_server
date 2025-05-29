@@ -9,6 +9,7 @@ const app = express()
 const port = 3000
 app.use(express.json()); // ⬅️ Ini wajib 
 app.use(volleyball);
+const { createClient } = require('redis');
 
 // app.use(cors({ origin : '*' })); 
 
@@ -94,8 +95,6 @@ async function startSecretLoop() {
   } 
 
 }
- 
-
 
 
 
