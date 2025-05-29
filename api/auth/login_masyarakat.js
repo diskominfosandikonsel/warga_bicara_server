@@ -5,8 +5,8 @@ const uniqid =  require('uniqid');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
-const {decrypt, encrypt} = require('../../library/encrypt/enkripsi')
-// const redisClient = require('../../library/redist/redist');
+const {decrypt, encrypt} = require('../../library/encrypt/enkripsi') 
+const { connectRedis, redisClient } = require('../../library/redist/redist');
 
 
 const {getCollection} = require('../../db/mongodb/controller')
@@ -70,8 +70,8 @@ router.post('/login', async (req, res, next) => {
             console.log("Username Salah"); 
             respondError422(res, next, "Username Salah");
         } else {
-          console.log("User ditemukan");
-          console.log(result);
+        //   console.log("User ditemukan");
+        //   console.log(result);
           // res.send(result)
           
                       var user = {}
@@ -120,11 +120,20 @@ router.post('/login', async (req, res, next) => {
                                             respondError422(res, next, "Kesalahan dlm pembuatan token");
                                         } else {
 
-
+const device = "Andorororo"
                                           // const redisKey = `whitelist:${user.username}`;
                                           // await redisClient.set(redisKey, token, {
                                           //   EX: global.secretDuration, // 1 hour in seconds
                                           // });
+
+                                        //   await connectRedis().set('whitelist', user.username, JSON.stringify({ token }));
+// await connectRedis.ft.create('whitelist', user.username, JSON.stringify({ token }));
+await connectRedis();
+await redisClient.set('whitelist', JSON.stringify({ username: user.username, token:token }));
+
+// await redisClient.quit();
+
+
 
                                           console.log("sudah berhasil kirim");
                                           

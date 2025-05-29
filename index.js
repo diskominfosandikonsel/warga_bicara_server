@@ -5,11 +5,14 @@ const cors = require('cors');
 var path = require("path");
 const middleware = require('./auth/middleware');
 const crypto = require('crypto')
+const { connectRedis } = require('./library/redist/redist');
+
 const app = express()
 const port = 3000
 app.use(express.json()); // ⬅️ Ini wajib 
 app.use(volleyball);
-const { createClient } = require('redis');
+// Connect Redis once on app start
+connectRedis().catch(console.error);
 
 // app.use(cors({ origin : '*' })); 
 
@@ -85,7 +88,7 @@ async function startSecretLoop() {
   const row = await db.findOne({}) 
 
   if (row) {
-    console.log(row);
+    // console.log(row);
     global.secretDuration = row.duration;
     global.SecretKey = buatSecretKey();
     setInterval(buatSecretKey, global.secretDuration * 60000);
@@ -95,6 +98,9 @@ async function startSecretLoop() {
   } 
 
 }
+
+
+ 
 
 
 

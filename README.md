@@ -21,3 +21,13 @@ Response Code
 
     200 Success         Green
     400-511 Gagal       Red
+
+
+Instalasi Library
+    Untuk Redis harus di install manual
+
+
+
+
+- login Admin dan Client 
+- Dekripsi username dan Password
