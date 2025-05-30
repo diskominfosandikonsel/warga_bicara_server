@@ -51,6 +51,10 @@ function respondError422(res, next, text) {
 
 
 router.post('/login', async (req, res, next) => { 
+    const db = await getCollection('durationSecretKey');
+    const row = await db.findOne({})
+    global.secretDuration = row.duration
+
 
   const request = {
         username: await decrypt(req.body.username, global.SecretKey),
@@ -114,28 +118,14 @@ router.post('/login', async (req, res, next) => {
 
                     if (result) {
                                     jwt.sign(payload, process.env.TOKEN_SECRET, {
-                                        expiresIn: '24h'
+                                        expiresIn: global.secretDuration * 60
                                     }, async (err, token) => {
                                         if (err) {
                                             respondError422(res, next, "Kesalahan dlm pembuatan token");
                                         } else {
 
-const device = "Andorororo"
-                                          // const redisKey = `whitelist:${user.username}`;
-                                          // await redisClient.set(redisKey, token, {
-                                          //   EX: global.secretDuration, // 1 hour in seconds
-                                          // });
-
-                                        //   await connectRedis().set('whitelist', user.username, JSON.stringify({ token }));
-// await connectRedis.ft.create('whitelist', user.username, JSON.stringify({ token }));
-await connectRedis();
-await redisClient.set('whitelist', JSON.stringify({ username: user.username, token:token }));
-
-// await redisClient.quit();
-
-
-
-                                          console.log("sudah berhasil kirim");
+                                            await connectRedis();
+                                            await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
                                           
                                             res.json({
                                                 token,
@@ -156,6 +146,59 @@ await redisClient.set('whitelist', JSON.stringify({ username: user.username, tok
   
   
 })
+
+router.post('/logout', async (req, res) => {
+    const db = await getCollection('durationSecretKey');
+    const row = await db.findOne({})
+    global.secretDuration = row.duration
+
+    const authHeader = req.get('authorization');
+     // console.log("authHeader");
+     // console.log(authHeader);
+     
+    if (authHeader) {
+        // jika ada authorization yang dikirim client melalui headers
+        // dan karena token yang dikirim dipisahkan spasi maka kita pisahkan bagiannya
+        const token = authHeader.split(' ')[1];
+        // console.log("token");
+        // console.log(token);
+        
+ 
+        if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
+      
+        await redisClient.del(`whitelist:${token}`);
+        await redisClient.set(`blacklist:${token}`, '1', { EX: 5 * 60 });
+      
+        res.json({ message: 'Logout berhasil' });
+    }
+
+});
+
+router.post('/blacklist', async (req, res) => {
+
+    const db = await getCollection('durationSecretKey');
+    const row = await db.findOne({})
+    global.secretDuration = row.duration
+
+    var waktuBlaklist = 1 
+
+    const authHeader = req.get('authorization'); 
+     
+    if (authHeader) { 
+        const token = authHeader.split(' ')[1]; 
+ 
+        if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
+      
+        await redisClient.set(`blacklist:${token}`, '1', { EX: waktuBlaklist * 60 });
+        // await redisClient.del(`whitelist:${token}`);
+      
+        res.json({ message: 'Blaklist berhasil dan akan di hapus' });
+    }
+
+});
+
+
+
 
 router.post('/encrypt', async (req, res)=>{ // Ini nanti di hapus yaaaa 🔖🔖
   // var enkrip = 'OGvz3dY/96Ca8IpfznCecg==' 
