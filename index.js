@@ -23,6 +23,7 @@ const allowedOrigins = [
 //   '*',
   'http://localhost:3000',
   'http://10.0.2.2:3000', // untuk android emu
+  'http://localhost:5173', // untuk client
 ];
 
 app.use(cors({
