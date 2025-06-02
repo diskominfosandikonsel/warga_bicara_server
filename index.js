@@ -138,9 +138,8 @@ async function startSecretLoop() {
 
   const regMsyarakat = require('./api/auth/registration_masyarakat');
   app.use('/api/v1/reg_masyarakat', regMsyarakat);                        //REGIS MASYARAKAT
-
   const resetPwdM = require('./api/auth/resetPassword');
-  app.use('/api/v1/auth/resetM', resetPwdM);                        //REGIS MASYARAKAT
+  app.use('/api/v1/resetM', resetPwdM);                        //REGIS MASYARAKAT
 
   const routeAuth = require('./auth/login');
   app.use('/api/v1/auth', routeAuth);
@@ -156,7 +155,7 @@ async function startSecretLoop() {
   app.use('/registration', middleware.isLoggedIn, registration);          //REGIS ADMIN
 
   const resetPwdc = require('./auth/resetPassword');
-  app.use(' ', middleware.isLoggedIn, resetPwdc);          //REGIS ADMIN
+  app.use('/api/v1/auth/resetC', resetPwdc);          //REGIS ADMIN
 // API START HERE ==========================
 
 
