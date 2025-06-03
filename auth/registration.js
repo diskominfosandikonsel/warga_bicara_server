@@ -33,11 +33,7 @@ const schema = Joi.object().keys({
 
 router.post('/signup', async (req, res, next) => {
 
-    console.log('data dari frontend:', { 
-        ...req.body, 
-        password: '*****', 
-        confirmPassword: '*****' 
-      });
+ 
 
 
     const request = {
@@ -57,8 +53,9 @@ router.post('/signup', async (req, res, next) => {
         // if (result.length <= 0 ) {
             const existingUser = await users.findOne({
                 $or: [
-                    { username: req.body.username },
-                    { nik: req.body.nik }
+                    { email     : req.body.email },
+                    { username  : req.body.username },
+                    { nik       : req.body.nik }
                 ]
             });
             if (!existingUser) {

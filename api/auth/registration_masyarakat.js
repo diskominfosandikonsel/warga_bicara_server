@@ -37,8 +37,6 @@ const schema = Joi.object().keys({
 
   router.post('/signup', async (req, res) => { 
 
- 
-
     const request = {
         username: req.body.username,
         password: req.body.password,
@@ -53,9 +51,14 @@ const schema = Joi.object().keys({
  
         const users = await getCollection('users'); //memilih collection yang mau di query
         const result = await users.find({
-            "username"  :req.body.username,
-            "nik"       :req.body.nik
+            $or: [
+                {email      :req.body.email},
+                {username   :req.body.username},
+                {nik        :req.body.nik}
+            ]
         }).toArray(); //query cari data
+
+        
         
 
         if (result.length <= 0 ) {
