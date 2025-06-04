@@ -148,6 +148,8 @@ async function startSecretLoop() {
   app.use('/api/v1/authMasyarakat', routeAuthMasyarakat);
 
 
+
+  // =========================== ADMIN ===========================
   const checkAuth = require('./auth/cekMidleware');
   app.use('/checkAuth', middleware.isLoggedIn, checkAuth);
 
@@ -156,6 +158,7 @@ async function startSecretLoop() {
 
   const resetPwdc = require('./auth/resetPassword');
   app.use('/api/v1/auth/resetC', resetPwdc);          //REGIS ADMIN
+  // =========================== ADMIN ===========================
 // API START HERE ==========================
 
 

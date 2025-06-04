@@ -267,11 +267,10 @@ const cekEmailuser = async (req, res, next) => {
         const users = await getCollection('users')
         const result = await users.findOne({"email":req.body.email}) //query cari data   
         console.log('cekEmailuser'); 
-        if (result.length <= 0) {
+        if (result == null) {
             respondError422(res, next, 'Email anda tidak terdaftar pada aplikasi')
         } else {
             console.log(result);
-            
             await insertDataSementara(req, res, next, result)
         }
 }

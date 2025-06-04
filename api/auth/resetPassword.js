@@ -60,8 +60,8 @@ router.get('/confirm', async (req, res, next) => {
     const dekripsiID = await dekripsi(idx) 
 
     // cari database token reset password di redis
-    const result_redis =  await redisClient.get(`reset_account:${dekripsiID}`); 
-    const hasilRedis = JSON.parse(result_redis)
+    const result_redis =  await redisClient.get(`reset_account:${dekripsiID}`);
+    const hasilRedis = JSON.parse(result_redis);
 
     if (hasilRedis===null) {
         res.send(`
@@ -259,19 +259,17 @@ router.get('/confirm', async (req, res, next) => {
         }
     })
     
-    
-
 })
 
 const cekEmailuser = async (req, res, next) => {  
         const users = await getCollection('users')
         const result = await users.findOne({"email":req.body.email}) //query cari data   
         console.log('cekEmailuser'); 
-        if (result.length <= 0) {
+        console.log(result); 
+        if (result == null) {
             respondError422(res, next, 'Email anda tidak terdaftar pada aplikasi')
         } else {
-            console.log(result);
-            
+            // console.log(result);
             await insertDataSementara(req, res, next, result)
         }
 }
