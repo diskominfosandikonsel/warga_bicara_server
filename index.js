@@ -14,7 +14,14 @@ app.use(volleyball);
 // Connect Redis once on app start
 connectRedis().catch(console.error);
 
+const {connectMongo} = require('./db/mongodb/connection')
+const {getCollection} = require('./db/mongodb/controller')
+
+
+
+
 // app.use(cors({ origin : '*' })); 
+
 
 const allowedOrigins = [
 //   'https://domain1.com',
@@ -40,12 +47,12 @@ app.use(cors({
 }));
 
 
-const {connectMongo} = require('./db/mongodb/connection')
 
-
-const {getCollection} = require('./db/mongodb/controller')
 
 app.use(middleware.checkTokenSeetUser);
+
+app.use('/uploads', express.static(path.join(__dirname, './uploads')))
+
 
 app.get('/', async (req, res) => { 
     res.send(JSON.stringify({
@@ -108,6 +115,7 @@ async function startSecretLoop() {
 
 
 // API START HERE ==========================
+
   app.get('/getSecretKey', async (req, res) => {
 
       const db = await getCollection('durationSecretKey');
@@ -136,29 +144,32 @@ async function startSecretLoop() {
   });
 
 
-  const regMsyarakat = require('./api/auth/registration_masyarakat');
-  app.use('/api/v1/reg_masyarakat', regMsyarakat);                        //REGIS MASYARAKAT
-  const resetPwdM = require('./api/auth/resetPassword');
-  app.use('/api/v1/auth/resetM', resetPwdM);                        //REGIS MASYARAKAT
-
-  const routeAuth = require('./auth/login');
-  app.use('/api/v1/auth', routeAuth);
-
-  const routeAuthMasyarakat = require('./api/auth/login_masyarakat');
-  app.use('/api/v1/authMasyarakat', routeAuthMasyarakat);
-
-
-
-  // =========================== ADMIN ===========================
+  
   const checkAuth = require('./auth/cekMidleware');
   app.use('/checkAuth', middleware.isLoggedIn, checkAuth);
+  // =========================== CLIENT ===========================
+  const authClient = require('./auth/client')
+  app.use('/api/v1/authClient', authClient);                        //AUTH MASYARAKAT
 
-  const registration = require('./auth/registration');
-  app.use('/registration', middleware.isLoggedIn, registration);          //REGIS ADMIN
+  const profileMasyarakat = require('./api/profile/profile_client');
+  app.use('/api/v1/client_profile', profileMasyarakat);            
 
-  const resetPwdc = require('./auth/resetPassword');
-  app.use('/api/v1/auth/resetC', resetPwdc);          //REGIS ADMIN
+  // =========================== CLIENT ===========================
+
   // =========================== ADMIN ===========================
+
+  const authAdmin = require('./auth/admin')
+  app.use('/api/v1/authAdmin', authAdmin);                                                  //AUTH ADMIN 
+
+  const registration = require('./auth/admin/registration');
+  app.use('/api/v1/authAdmin/registration', middleware.isLoggedIn, registration);           //REGIS ADMIN
+
+  const profile_admin = require('./api/profile/profile_admin');
+  app.use('/api/v1/admin_profile', middleware.isLoggedIn, profile_admin);                   //REGIS ADMIN
+  
+
+  // =========================== ADMIN ===========================
+
 // API START HERE ==========================
 
 

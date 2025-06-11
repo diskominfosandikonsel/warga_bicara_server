@@ -33,7 +33,7 @@ function checkTokenSeetUser(req, res, next){
                          next()
                          // return res.status(403).json({ message: 'Token telah diblacklist' });
                     }else{
-                         console.log("tidak di blacklist" );
+                         console.log("tidak di blacklist ABC" );
 
                          // Cek whitelist
                          const isWhitelisted = await redisClient.exists(`whitelist:${token}`);
@@ -55,6 +55,7 @@ function checkTokenSeetUser(req, res, next){
                               next()
      
                          }
+ 
                     }
                     
          

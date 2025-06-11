@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
-var db = require('../db/mongodb/connection')
-const {getCollection} = require('../db/mongodb/controller')
+var db = require('../../db/mongodb/connection')
+const {getCollection} = require('../../db/mongodb/controller')
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const uniqid = require('uniqid'); 
 
 const schema = Joi.object().keys({
     username: Joi.string()

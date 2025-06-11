@@ -1,27 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const {connectMongo} = require('../db/mongodb/connection')
+const {connectMongo} = require('../../db/mongodb/connection')
 const uniqid =  require('uniqid');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
-const {decrypt, encrypt} = require('../library/encrypt/enkripsi') 
-const { connectRedis, redisClient } = require('../library/redist/redist');
-const { kirimEmail } = require('../library/nodemailer/sendResetpass');
-const { respondError422 } = require('../library/utilitas/errorHandler');
-const crypto = require('crypto');
 
-const {getCollection} = require('../db/mongodb/controller');
- 
+const {getCollection} = require('../../db/mongodb/controller')
+
+const {decrypt, encrypt} = require('../../library/encrypt/enkripsi') 
+const { connectRedis, redisClient } = require('../../library/redist/redist');
+
+const { kirimEmail } = require('../../library/nodemailer/sendResetpass');
+const { xrespondError422 } = require('../../library/utilitas/errorHandler');
+
 const Cryptr = require('cryptr');
 const cryptr = new Cryptr(process.env.KEYRESETPASS);
-
-
- 
-
- 
 // SKEMA JOI ===========================
-const schema = Joi.object().keys({
+
+    const schema = Joi.object().keys({
     username: Joi.string()
                 .alphanum() // hanya huruf dan angka 
                 .min(6)
@@ -45,12 +42,270 @@ const schema = Joi.object().keys({
                     'string.base': 'Password harus berupa teks.',
                     'any.required': 'Password wajib diisi.',
                 }),
-}); 
+    }); 
+
 // SKEMA JOI ===========================
+ 
+
+
+router.post('/signup', async (req, res) => { 
+
+    const request = {
+        username: req.body.username,
+        password: req.body.password,
+    }  
+    const { error, value } = schema.validate(request);
+    if (error) { 
+        res.status(409).json({message: error.details[0].message})
+
+    } else {
+        
+
+ 
+        const users = await getCollection('users'); //memilih collection yang mau di query
+        const result = await users.find({
+            $or: [
+                {email      :req.body.email},
+                {username   :req.body.username},
+                {nik        :req.body.nik}
+            ]
+        }).toArray(); //query cari data
+
+        
+        
+
+        if (result.length <= 0 ) {
+            console.log("ayo Insert");
+            bcrypt.hash(req.body.password.trim(), 12).then(async hashedPassword =>  {
+
+                var form = {
+                    id                          : uniqid(),
+                    username                    : req.body.username,
+                    password                    : hashedPassword,
+                    nama                        : req.body.nama,
+                    alamat                      : req.body.alamat,
+                    master_jk_id                : req.body.master_jk_id,
+                    tgl_lahir                   : req.body.tgl_lahir,
+                    master_prov_id              : req.body.master_prov_id,
+                    master_kab_id               : req.body.master_kab_id,
+                    master_kec_id               : req.body.master_kec_id,
+                    master_deskel_id            : req.body.master_deskel_id,
+                    master_agama_id             : req.body.master_agama_id,
+                    master_pekerjaan_id         : req.body.master_pekerjaan_id,
+                    master_pendidikan_id        : req.body.master_pendidikan_id,
+                    hp                          : req.body.hp,
+                    nik                         : req.body.nik,
+                    nip                         : req.body.nip,
+                    email                       : req.body.email,
+                    authorization               : null,
+                    kategori_user               : req.body.kategori_user,
+                    master_unit_kerja_id        : req.body.master_unit_kerja_id
+                }
+        
+                try {
+                    const results = await users.insertOne(form)
+                    if (results.acknowledged) {  // results.acknowledged Hasilnya true / false
+                        console.log("Berhasil Menambahkan User " + req.body.username);
+                        res.status(201).json({
+                            success: true,
+                            message: "Berhasil Menambahkan User " + req.body.username})
+                    } else {
+                        console.log('Insert gagal '+err); 
+                        res.status(500).json({message: "Insert Gagal "+err})
+                    }
+                } catch (err) { 
+                    console.error('Terjadi error saat insert:', err);
+                    res.status(500).json({message: "Terjadi error saat insert "+err})
+                }
+
+            })
+
+            
+
+        } else {
+            console.log("Jangan Insert");
+            res.status(409).json({message:"Gagal melakukan insert data. Data user sudah pernah ada."}) 
+        }
+    
+    } 
+
+
+})
+
+function respondError422(res, next, text) {
+    res.status(422);
+    const error = new Error(text);
+    next(error);
+}
+
+router.post('/login', async (req, res, next) => { 
+    const db = await getCollection('durationSecretKey');
+    const row = await db.findOne({})
+    global.secretDuration = row.duration
+
+
+  const request = {
+        username: await decrypt(req.body.username, global.SecretKey),
+        password: await decrypt(req.body.password, global.SecretKey),
+  }
+
+  const { error, value } = schema.validate(request);
+    if (error) { 
+        res.status(409).json({message: error.details[0].message})
+
+    } else {
+
+        const users = await getCollection('users')
+        const result = await users.find({"username":request.username}).toArray(); //query cari data  
+
+        if (result.length <= 0 ) {
+            console.log("Username Salah"); 
+            respondError422(res, next, "Username Salah");
+        } else {
+        //   console.log("User ditemukan");
+        //   console.log(result);
+          // res.send(result)
+          
+                      var user = {}
+                for (var i in result) { user = result[i] }
+                
+                const payload = {
+                    _id                               : user._id,  
+                    id                                : user.id, 
+                    profile: {
+                        username                          : user.username, 
+                        password                          : user.password, 
+                        nama                              : user.nama,  
+                        alamat                            : user.alamat,  
+                        master_jk_id                      : user.master_jk_id, 
+                        tgl_lahir                         : user.tgl_lahir,  
+                        hp                                : user.hp, 
+                        nik                               : user.nik, 
+                        nip                               : user.nip,  
+                        email                             : user.email, 
+                        master_prov_id                    : user.master_prov_id, 
+                        master_kab_id                     : user.master_kab_id, 
+                        master_kec_id                     : user.master_kec_id, 
+                        master_deskel_id                  : user.master_deskel_id, 
+                        master_agama_id                   : user.master_agama_id, 
+                        master_pekerjaan_id               : user.master_pekerjaan_id, 
+                        master_pendidikan_id              : user.master_pendidikan_id, 
+                    },
+                    auth:{
+                        authorization                     : user.authorization, 
+                        kategori_user                     : user.kategori_user, 
+                        master_unit_kerja_id              : user.master_unit_kerja_id, 
+                    }
+                };
+
+                console.log("Token_secret : ", process.env.TOKEN_SECRET);
+
+                bcrypt.compare(request.password, user.password).then((result) => {
+                    console.log(result);
+                    console.log("bcrypt");
+
+                    if (result) {
+                                    jwt.sign(payload, process.env.TOKEN_SECRET, {
+                                        expiresIn: global.secretDuration * 60
+                                    }, async (err, token) => {
+                                        if (err) {
+                                            respondError422(res, next, "Kesalahan dlm pembuatan token");
+                                        } else {
+
+                                            await connectRedis();
+                                            await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
+                                          
+                                            res.json({
+                                                token : token,
+                                                profile: payload
+                                            });
+                                        }
+                                    })                        
+                    } else {
+                        respondError422(res, next, "Password salah");
+                    }
+
+                })
+                
+        }
+        
+    }
+  
+  
+  
+})
+
+router.post('/logout', async (req, res) => {
+    const db = await getCollection('durationSecretKey');
+    const row = await db.findOne({})
+    global.secretDuration = row.duration
+
+    const authHeader = req.get('authorization');
+     // console.log("authHeader");
+     // console.log(authHeader);
+     
+    if (authHeader) {
+        // jika ada authorization yang dikirim client melalui headers
+        // dan karena token yang dikirim dipisahkan spasi maka kita pisahkan bagiannya
+        const token = authHeader.split(' ')[1];
+        // console.log("token");
+        // console.log(token);
+        
+ 
+        if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
+      
+        await redisClient.del(`whitelist:${token}`);
+        await redisClient.set(`blacklist:${token}`, '1', { EX: 5 * 60 });
+      
+        res.json({ message: 'Logout berhasil' });
+    }
+
+});
+
+router.post('/blacklist', async (req, res) => {
+
+    const db = await getCollection('durationSecretKey');
+    const row = await db.findOne({})
+    global.secretDuration = row.duration
+
+    var waktuBlaklist = 1 
+
+    const authHeader = req.get('authorization'); 
+     
+    if (authHeader) { 
+        const token = authHeader.split(' ')[1]; 
+ 
+        if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
+      
+        await redisClient.set(`blacklist:${token}`, '1', { EX: waktuBlaklist * 60 });
+        // await redisClient.del(`whitelist:${token}`);
+      
+        res.json({ message: 'Blaklist berhasil dan akan di hapus' });
+    }
+
+});
+
+router.post('/encrypt', async (req, res)=>{ // Ini nanti di hapus yaaaa 🔖🔖
+  // var enkrip = 'OGvz3dY/96Ca8IpfznCecg==' 
+    const username = await encrypt(req.body.username, global.SecretKey)
+    const password = await encrypt(req.body.password, global.SecretKey) 
+
+    const request = {
+      username: username,
+      password: password,
+      key:global.SecretKey
+    }
+
+    console.log(request);
+    res.send(request) 
+
+})
 
 
 
-router.post('/passwordC', async (req, res, next) => { 
+
+// =================================== RESET PASSWORD ================================
+router.post('/passwordM', async (req, res, next) => { 
     await cekEmailuser(req, res, next)  
 })
 
@@ -60,8 +315,8 @@ router.get('/confirm', async (req, res, next) => {
     const dekripsiID = await dekripsi(idx) 
 
     // cari database token reset password di redis
-    const result_redis =  await redisClient.get(`reset_account:${dekripsiID}`); 
-    const hasilRedis = JSON.parse(result_redis)
+    const result_redis =  await redisClient.get(`reset_account:${dekripsiID}`);
+    const hasilRedis = JSON.parse(result_redis);
 
     if (hasilRedis===null) {
         res.send(`
@@ -259,18 +514,16 @@ router.get('/confirm', async (req, res, next) => {
         }
     })
     
-    
-
 })
 
 const cekEmailuser = async (req, res, next) => {  
         const users = await getCollection('users')
         const result = await users.findOne({"email":req.body.email}) //query cari data   
         console.log('cekEmailuser'); 
+        console.log(result); 
         if (result == null) {
-            respondError422(res, next, 'Email anda tidak terdaftar pada aplikasi')
-        } else {
-            console.log(result);
+            xrespondError422(res, next, 'Email anda tidak terdaftar pada aplikasi')
+        } else { 
             await insertDataSementara(req, res, next, result)
         }
 }
@@ -333,26 +586,6 @@ router.post('/logout', async (req, res) => {
     }
 
 });
-
- 
-
-
-
-
-router.post('/encrypt', async (req, res)=>{ // Ini nanti di hapus yaaaa 🔖🔖
-  // var enkrip = 'OGvz3dY/96Ca8IpfznCecg==' 
-    const username = await encrypt(req.body.username, global.SecretKey)
-    const password = await encrypt(req.body.password, global.SecretKey) 
-
-    const request = {
-      username: username,
-      password: password,
-      key:global.SecretKey
-    }
-
-    console.log(request);
-    res.send(request) 
-
-})
+// =================================== RESET PASSWORD ================================
 
 module.exports = router;
