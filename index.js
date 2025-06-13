@@ -152,7 +152,7 @@ async function startSecretLoop() {
   app.use('/api/v1/authClient', authClient);                        //AUTH MASYARAKAT
 
   const profileMasyarakat = require('./api/profile/profile_client');
-  app.use('/api/v1/client_profile', profileMasyarakat);            
+  app.use('/api/v1/client_profile', middleware.isLoggedIn, profileMasyarakat);            
 
   // =========================== CLIENT ===========================
 

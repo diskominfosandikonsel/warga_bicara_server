@@ -73,7 +73,7 @@ const kirimEmail =  async (req, res, next, result, dataUserdb)=>{
                 <p>Halo,</p>
                 <p>Anda menerima email ini karena kami menerima permintaan reset password untuk akun Anda.</p>
                 <p>Silakan klik tombol di bawah ini untuk mengkonfirmasi password baru yang telah anda masukan:</p>
-                <a href="`+process.env.HOSTSERVER+`/api/v1/auth/resetM/confirm?token=`+result+`" class="button">Reset Password</a>
+                <a href="`+process.env.HOSTSERVER+`/api/v1/authClient/confirm?token=`+result+`" class="button">Reset Password</a>
                 <p>Jika Anda tidak meminta reset password, abaikan email ini dan tidak ada tindakan yang diperlukan.</p>
                 <p>Terima kasih,<br>Tim Support</p>
                 <div class="footer">
