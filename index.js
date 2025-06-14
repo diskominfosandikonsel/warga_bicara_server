@@ -17,9 +17,6 @@ connectRedis().catch(console.error);
 const {connectMongo} = require('./db/mongodb/connection')
 const {getCollection} = require('./db/mongodb/controller')
 
-
-
-
 // app.use(cors({ origin : '*' })); 
 
 
@@ -60,7 +57,6 @@ app.get('/', async (req, res) => {
     }))  
 })
 
-
 // GLOBAL VARIABEL
 global.SecretKey = 'ini sekret key';
 global.secretDuration = 0;
@@ -79,17 +75,12 @@ function buatSecretKey() {
     return result
 }
 
-
-
 // Fungsi Simpan Durasi ke Database
 async function saveSecretDuration(duration) { 
   const db = await getCollection('durationSecretKey'); 
   await db.deleteMany({})
   await db.insertOne({"duration":duration}) 
 }
-
-
-
 
 async function startSecretLoop() { 
   const db = await getCollection('durationSecretKey');
@@ -169,6 +160,11 @@ async function startSecretLoop() {
   
 
   // =========================== ADMIN ===========================
+
+  // =========================== MASTER ===========================
+  const master_alasanHapusAkun = require('./api/master/master_alasanHapusAkun');
+  app.use('/api/v1/master_alasanHapusAkun', middleware.isLoggedIn, master_alasanHapusAkun); //MASTER ALASAN HAPUS AKUN
+  // =========================== MASTER ===========================
 
 // API START HERE ==========================
 

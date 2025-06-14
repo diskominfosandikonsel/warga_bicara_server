@@ -21,6 +21,7 @@ const cryptr = new Cryptr(process.env.KEYRESETPASS);
 
 const {getCollection} = require('../../db/mongodb/controller')
 const IMAGE = require('../../library/multer/image');
+const id = require('volleyball/lib/id');
 
 router.post('/getView', async (req, res, next) => {
     console.log('getView');
@@ -178,7 +179,16 @@ router.post('/removeData', async (req, res, next) => {
         const users = await getCollection('users');  
         const result = await users.deleteOne({ id: req.body.id });
         if (result.deletedCount > 0) {
+            const hapus_akun = await getCollection('hapus_akun'); //memilih collection yang mau di query
+            const hapus_akun_results = await hapus_akun.insertOne({
+                id: uniqid(),
+                hapus_akun_id: req.body.alasan_hapus_akun_id
+            })
+            if (hapus_akun_results.insertedCount > 0) {
+                console.log("Data hapus_akun berhasil di insert");
+            }  
             res.status(200).json({ message: "Data berhasil dihapus" });
+
         } else {
             res.status(404).json({ message: "Data tidak ditemukan" });
         }
