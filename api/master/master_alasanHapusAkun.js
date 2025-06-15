@@ -32,11 +32,8 @@ router.get('/getView', async (req, res, next) => {
     if (result.length <= 0 ) {
         res.status(404).json({message: "Data tidak ditemukan"})
     } else {
-        const master_alasanHa = await getCollection('master_alasanHapusAkun'); //memilih collection yang mau di query
-        const results = await users.insertOne(form)
-
         res.status(200).json({
-            result:result
+            data:result
 
         });
     }
@@ -59,7 +56,7 @@ router.get('/getData', async (req, res, next) => {
         res.status(404).json({message: "Data tidak ditemukan"})     
     } else {
         res.status(200).json({
-            result:result
+            data:result
         });
     } 
 })
