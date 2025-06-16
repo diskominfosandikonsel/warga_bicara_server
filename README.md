@@ -26,12 +26,8 @@ Instalasi Library
 Untuk Redis harus di install manual
 
 <pre lang="markdown">
-```js
 brew install redis
-
-<!-- dan ketika sudah selesai -->
 redis-server
-```
 </pre>
 
 - login Admin dan Client
