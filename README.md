@@ -24,8 +24,15 @@ Response Code
 
 Instalasi Library
 Untuk Redis harus di install manual
-`brew install redis`
-`redis-server`
+
+<pre lang="markdown">
+```js
+brew install redis
+
+<!-- dan ketika sudah selesai -->
+redis-server
+```
+</pre>
 
 - login Admin dan Client
 - Dekripsi username dan Password
