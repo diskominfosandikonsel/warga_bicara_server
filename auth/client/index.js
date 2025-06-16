@@ -165,67 +165,74 @@ router.post('/login', async (req, res, next) => {
         //   console.log("User ditemukan");
         //   console.log(result);
           // res.send(result)
+
+              const isBlacklisted = await redisClient.exists(`blacklist-user:${result[0].id}`);
+                if (isBlacklisted) {
+                    return res.status(403).json({
+                        message: 'Akun Anda sedang dinonaktifkan sementara. Silakan coba lagi nanti.'
+                    });
+                }else{
+                    var user = {}
+                    for (var i in result) { user = result[i] }
+
+                    const payload = {
+                        _id                               : user._id,  
+                        id                                : user.id, 
+                        profile: {
+                            username                          : user.username, 
+                            password                          : user.password, 
+                            nama                              : user.nama,  
+                            alamat                            : user.alamat,  
+                            master_jk_id                      : user.master_jk_id, 
+                            tgl_lahir                         : user.tgl_lahir,  
+                            hp                                : user.hp, 
+                            nik                               : user.nik, 
+                            nip                               : user.nip,  
+                            email                             : user.email, 
+                            master_prov_id                    : user.master_prov_id, 
+                            master_kab_id                     : user.master_kab_id, 
+                            master_kec_id                     : user.master_kec_id, 
+                            master_deskel_id                  : user.master_deskel_id, 
+                            master_agama_id                   : user.master_agama_id, 
+                            master_pekerjaan_id               : user.master_pekerjaan_id, 
+                            master_pendidikan_id              : user.master_pendidikan_id, 
+                        },
+                        auth:{
+                            authorization                     : user.authorization, 
+                            kategori_user                     : user.kategori_user, 
+                            master_unit_kerja_id              : user.master_unit_kerja_id, 
+                        }
+                    };
+                    console.log("Token_secret : ", process.env.TOKEN_SECRET);
+    
+                    bcrypt.compare(request.password, user.password).then((result) => {
+                        console.log(result);
+                        console.log("bcrypt");
+    
+                        if (result) {
+                                        jwt.sign(payload, process.env.TOKEN_SECRET, {
+                                            expiresIn: global.secretDuration * 60
+                                        }, async (err, token) => {
+                                            if (err) {
+                                                respondError422(res, next, "Kesalahan dlm pembuatan token");
+                                            } else {
+    
+                                                await connectRedis();
+                                                await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
+                                            
+                                                res.json({
+                                                    token : token,
+                                                    profile: payload
+                                                });
+                                            }
+                                        })                        
+                        } else {
+                            respondError422(res, next, "Password salah");
+                        }
+    
+                    })
+                }          
           
-                      var user = {}
-                for (var i in result) { user = result[i] }
-                
-                const payload = {
-                    _id                               : user._id,  
-                    id                                : user.id, 
-                    profile: {
-                        username                          : user.username, 
-                        password                          : user.password, 
-                        nama                              : user.nama,  
-                        alamat                            : user.alamat,  
-                        master_jk_id                      : user.master_jk_id, 
-                        tgl_lahir                         : user.tgl_lahir,  
-                        hp                                : user.hp, 
-                        nik                               : user.nik, 
-                        nip                               : user.nip,  
-                        email                             : user.email, 
-                        master_prov_id                    : user.master_prov_id, 
-                        master_kab_id                     : user.master_kab_id, 
-                        master_kec_id                     : user.master_kec_id, 
-                        master_deskel_id                  : user.master_deskel_id, 
-                        master_agama_id                   : user.master_agama_id, 
-                        master_pekerjaan_id               : user.master_pekerjaan_id, 
-                        master_pendidikan_id              : user.master_pendidikan_id, 
-                    },
-                    auth:{
-                        authorization                     : user.authorization, 
-                        kategori_user                     : user.kategori_user, 
-                        master_unit_kerja_id              : user.master_unit_kerja_id, 
-                    }
-                };
-
-                console.log("Token_secret : ", process.env.TOKEN_SECRET);
-
-                bcrypt.compare(request.password, user.password).then((result) => {
-                    console.log(result);
-                    console.log("bcrypt");
-
-                    if (result) {
-                                    jwt.sign(payload, process.env.TOKEN_SECRET, {
-                                        expiresIn: global.secretDuration * 60
-                                    }, async (err, token) => {
-                                        if (err) {
-                                            respondError422(res, next, "Kesalahan dlm pembuatan token");
-                                        } else {
-
-                                            await connectRedis();
-                                            await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
-                                          
-                                            res.json({
-                                                token : token,
-                                                profile: payload
-                                            });
-                                        }
-                                    })                        
-                    } else {
-                        respondError422(res, next, "Password salah");
-                    }
-
-                })
                 
         }
         

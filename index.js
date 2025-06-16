@@ -17,6 +17,10 @@ connectRedis().catch(console.error);
 const {connectMongo} = require('./db/mongodb/connection')
 const {getCollection} = require('./db/mongodb/controller')
 
+const startRedisListener = require('./library/redist/redisListener'); // import listener kamu
+
+
+
 // app.use(cors({ origin : '*' })); 
 
 
@@ -192,9 +196,10 @@ app.use(notFound);
 app.use(errorHandler);
 
 
-app.listen(port, () => { 
+app.listen(port, async () => { 
   console.log(`Example app listening on port ${port}`);
   startSecretLoop();
+  await startRedisListener()
 })
 // app.listen(port, '0.0.0.0', () => {
 //   console.log(`Server running at http://0.0.0.0:${port}`);

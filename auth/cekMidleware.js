@@ -33,7 +33,13 @@ router.get('/checkAuth', async (req, res, next)=>{
 //    return res.status(401).json({ message: 'Token tidak valid atau kedaluwarsa' });
 // }
 
-res.send(req.user)
+// res.send(req.user)
+if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  res.json({ message: 'Selamat datang', user: req.user });
+
 })
 
 module.exports = router;

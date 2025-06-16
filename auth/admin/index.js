@@ -169,8 +169,14 @@ router.post('/login', async (req, res, next) => {
               console.log("User ditemukan");
               console.log(result);
               // res.send(result)
-              
-                          var user = {}
+
+              const isBlacklisted = await redisClient.exists(`blacklist-user:${result[0].id}`);
+                if (isBlacklisted) {
+                    return res.status(403).json({
+                        message: 'Akun Anda sedang dinonaktifkan sementara. Silakan coba lagi nanti.'
+                    });
+                }else{
+                    var user = {}
                     for (var i in result) { user = result[i] }
                     
                     const payload = {
@@ -219,7 +225,7 @@ router.post('/login', async (req, res, next) => {
                                               
                                             await connectRedis();
                                             await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
-
+    
                                                 res.json({
                                                     token,
                                                     profile: payload
@@ -229,11 +235,15 @@ router.post('/login', async (req, res, next) => {
                         } else {
                             // const users = await getCollection('users')
                             // const result = await users.find({"username":request.username}).toArray(); //query cari data  
-
+    
                             respondError422(res, next, "Password salah");
                         }
     
                     })
+
+                }
+
+              
                     
             }
             

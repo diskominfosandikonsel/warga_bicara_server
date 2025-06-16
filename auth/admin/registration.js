@@ -6,6 +6,7 @@ const {getCollection} = require('../../db/mongodb/controller')
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const uniqid = require('uniqid'); 
+const { connectRedis, redisClient } = require('../../library/redist/redist');
 
 const schema = Joi.object().keys({
     username: Joi.string()
@@ -278,28 +279,118 @@ router.post('/editPass', async (req, res, next) => {
 })
 
 router.post('/statusUser', async (req, res, next) => {
+    // is_active
+    const data = req.body;
+    console.log("🔧 Data input:", data);
+
+    const colUsers = await getCollection('users');
+    const user = await colUsers.findOne({ id: data.id });
+
+    if (!user) {
+        return res.status(404).json({ message: 'User tidak ditemukan' });
+    }
+
+    // 1. Set Redis blacklist berdasarkan userId
+    const waktuBlacklist = parseInt(data.waktuBlacklist); // dalam menit
+    console.log(waktuBlacklist);
+    
+    await redisClient.set(`blacklist-user:${user.id}`, '1', { EX: waktuBlacklist * 60 });
+
+    // 2. Update status di MongoDB
+    const resultUpdate = await colUsers.updateOne(
+        { id: data.id },
+        { $set: { is_active: data.is_active, waktuBlacklist: waktuBlacklist } }
+    );
+
+    if (resultUpdate.modifiedCount > 0) {
+        return res.json({
+            message: `✅ User ${user.username} berhasil dinonaktifkan selama ${waktuBlacklist} menit`
+        });
+    } else {
+        return res.status(500).json({ message: '❌ Gagal mengupdate status user' });
+    }
+
+    // ======================================
+    // const data = req.body;
+    // console.log(data);
+    //         const colUsers = await getCollection('users');
+    //         const users = await colUsers
+    //         .find({ id: data.id })
+    //         .toArray()
+
+    //         console.log(users[0]);
+
+    // jwt.sign(users[0], process.env.TOKEN_SECRET, {
+    //     expiresIn: data.waktuBlaklist * 60
+    // }, async (err, token) => {
+    //     if (err) {
+    //         console.error('Error saat membuat token:', err);
+    //         return res.status(500).json({ message: 'Internal Server Error' });
+    //     }
+    //     await redisClient.set(`blacklist:${token}`, '1', { EX: data.waktuBlaklist * 60 });
+    //     res.json({ token });
+    // });
+    // ======================================
+
+    // const users = await getCollection('users')
+    // const result_update = await users.updateOne(
+    //     { id: data.id },
+    //     { $set: { is_active: data.is_active } }
+    // )
+
+    // if (data.is_active === false) {
+    //     // Jika status diaktifkan, tambahkan ke whitelist Redis
+    //     const authHeader = req.get('authorization'); 
+    //     if (authHeader) { 
+    //         const token = authHeader.split(' ')[1]; 
+    //         if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
+            
+    //         await connectRedis();
+    //         await redisClient.set(`blacklist:${token}`, JSON.stringify({username: data.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
+    //     }
+        
+    // } 
+
+    // if (result_update.modifiedCount > 0) {
+
+    //     await connectRedis();
+    //     await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });        
+    //     res.status(200).json({
+    //         message: "Status user berhasil di update",
+    //     })
+
+    // } else {
+    //     res.status(500).json({message: "Terjadi kesalahan saat mengupdate status user"});
+    // }
 })
 
 router.post('/blacklist', async (req, res) => {
+    console.log(req.body);
+    const users = await getCollection('users')
+    const result_update = await users.updateOne(
+        { id: data.id },
+        { $set: { password: hashedPassword } }
+    )
+    
 
-    const db = await getCollection('durationSecretKey');
-    const row = await db.findOne({})
-    global.secretDuration = row.duration
+    // const db = await getCollection('durationSecretKey');
+    // const row = await db.findOne({})
+    // global.secretDuration = row.duration
 
-    var waktuBlaklist = req.body.waktuBlaklist // default waktu blacklist 1 menit
+    // var waktuBlaklist = req.body.waktuBlaklist // default waktu blacklist 1 menit
 
-    const authHeader = req.get('authorization'); 
+    // const authHeader = req.get('authorization'); 
      
-    if (authHeader) { 
-        const token = authHeader.split(' ')[1]; 
+    // if (authHeader) { 
+    //     const token = authHeader.split(' ')[1]; 
  
-        if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
+    //     if (!token) return res.status(400).json({ message: 'Token tidak ditemukan' });
       
-        await redisClient.set(`blacklist:${token}`, '1', { EX: waktuBlaklist * 60 });
-        // await redisClient.del(`whitelist:${token}`);
+    //     await redisClient.set(`blacklist:${token}`, '1', { EX: waktuBlaklist * 60 });
+    //     // await redisClient.del(`whitelist:${token}`);
       
-        res.json({ message: 'Blaklist berhasil dan akan di hapus' });
-    }
+    //     res.json({ message: 'Blaklist berhasil dan akan di hapus' });
+    // }
 
 });
 
