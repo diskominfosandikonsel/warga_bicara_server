@@ -13,13 +13,10 @@ async function startRedisListener() {
 const subscriber = redisClient.duplicate(); // penting: gunakan duplicate()
 
   await subscriber.connect();
-//   await mongoClient.connect();
+  
+    const users = await getCollection('users') 
 
-//   const db = mongoClient.db(dbName);
-    const users = await getCollection('users')
-//   const users = db.collection('users');
-
-  await subscriber.configSet('notify-keyspace-events', 'Ex');
+  await subscriber.configSet('notify-keyspace-events', 'Ex') // Setel untuk mendengarkan event expired
 
   await subscriber.pSubscribe('__keyevent@0__:expired', async (message) => {
     console.log(`🔔 Key expired: ${message}`);
