@@ -97,8 +97,8 @@ router.post('/signup', async (req, res) => {
                     nik                         : req.body.nik,
                     nip                         : req.body.nip,
                     email                       : req.body.email,
-                    authorization               : null,
-                    kategori_user               : req.body.kategori_user,
+                    // authorization               : null,
+                    kategori_user               : null,
                     master_unit_kerja_id        : req.body.master_unit_kerja_id,
                     is_active                   : true, // default true
                     waktuBlacklist              : '', // default ''

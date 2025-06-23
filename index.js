@@ -162,13 +162,18 @@ async function startSecretLoop() {
   const profile_admin = require('./api/profile/profile_admin');
   app.use('/api/v1/admin_profile', middleware.isLoggedIn, profile_admin);                   //REGIS ADMIN
   
-
-  // =========================== ADMIN ===========================
-
   // =========================== MASTER ===========================
   const master_alasanHapusAkun = require('./api/master/master_alasanHapusAkun');
   app.use('/api/v1/master_alasanHapusAkun', middleware.isLoggedIn, master_alasanHapusAkun); //MASTER ALASAN HAPUS AKUN
+
+  const listMenu = require('./api/listMenu/listMenu');
+  app.use('/api/v1/listMenu', middleware.isLoggedIn, listMenu); //MASTER ALASAN HAPUS AKUN
   // =========================== MASTER ===========================
+
+
+
+  // =========================== ADMIN ===========================
+
 
 // API START HERE ==========================
 
