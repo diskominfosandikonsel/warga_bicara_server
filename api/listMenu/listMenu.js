@@ -10,14 +10,25 @@ const uniqid = require('uniqid')
 
 router.post('/viewData', async (req, res, next) => { 
     const listMenu = await getCollection('menu'); //memilih collection yang mau di query
-    const result = await listMenu.find().toArray(); //query cari data
+    const result = await listMenu.find().sort({urutan:1}).toArray(); //query cari data
     if (result.length <= 0) {
         res.status(404).json({ message: "Data tidak ditemukan" })
     } else {
-            const nest = (items, id = null, link = 'parrent') =>
+            // const nest = (items, id = null, link = 'parent') =>
+            // items
+            //     .filter(item => item[link] === id)
+            //     .map(item => ({ ...item, child: nest(items, item.id) })); 
+            const nest = (items, id = null, link = 'parent') =>
             items
                 .filter(item => item[link] === id)
-                .map(item => ({ ...item, subItem: nest(items, item.id) })); 
+                .map(item => {
+                const children = nest(items, item.id, link);
+                return {
+                    ...item,
+                    ...(children.length > 0 && { child: children }) // hanya tambahkan jika tidak kosong
+                };
+                });
+
                 
             res.send(nest(result))
     }
