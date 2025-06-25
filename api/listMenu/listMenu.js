@@ -36,6 +36,7 @@ router.post('/viewData', async (req, res, next) => {
 
 router.post('/addData', async (req, res, next) => {
     const data = req.body; 
+          data.id = uniqid(); //generate id unik
     const listMenu = await getCollection('menu');
     const result = await listMenu.insertOne(data);
     responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
@@ -45,15 +46,15 @@ router.post('/editData', async (req, res, next) => {
     const data = req.body; 
     const listMenu = await getCollection('menu');
     const result = await listMenu.updateOne({ id :data.id }, 
-        { $set: {
-                    title     :data.title,
-                    icon      :data.icon,
-                    color     :data.color,
-                    route     :data.route,
-                    type      :data.type,
-                    jenis     :data.jenis,
-                    parrent   :data.parrent,
-                    urutan    :data.urutan
+        { $set: { 
+                    uraian         : data.uraian,               
+                    multiple       : data.multiple,               
+                    parent         : data.parent,              
+                    icon           : data.icon,              
+                    text_color     : data.text_color,            
+                    icon_color     : data.icon_color,       
+                    route          : data.route,          
+                    urutan         : data.urutan,               
                 }
         })
 
