@@ -167,10 +167,10 @@ async function startSecretLoop() {
   app.use('/api/v1/master_alasanHapusAkun', middleware.isLoggedIn, master_alasanHapusAkun); //MASTER ALASAN HAPUS AKUN
 
   const listMenu = require('./api/listMenu/listMenu');
-  app.use('/api/v1/listMenu', middleware.isLoggedIn, listMenu);
+  app.use('/api/v1/listMenu', middleware.isLoggedIn, middleware.sideMenuMidleware, listMenu);
 
   const klp_users = require('./api/kelompok_user/klp_users');
-  app.use('/api/v1/klp_users', middleware.isLoggedIn, klp_users);
+  app.use('/api/v1/klp_users', middleware.isLoggedIn, middleware.sideMenuMidleware, klp_users);
   // =========================== MASTER ===========================
 
 

@@ -2,6 +2,8 @@
 
 const jwt = require('jsonwebtoken');
 const { connectRedis, redisClient } = require('../library/redist/redist');
+const {getCollection} = require('../db/mongodb/controller')
+
 
 // function checkTokenSeetUser(req, res, next){
 //      const authHeader = req.get('authorization');
@@ -138,7 +140,58 @@ function isLoggedIn(req, res, next){
      }
 }
 
+async function sideMenuMidleware(req, res, next){
+  const klpId = parseInt(req.user.auth.authorization)
+  // console.log(klpId);
+  // console.log('sideMenuMidleware');
+
+  const menu_klp_list = await getCollection('menu_klp_list');
+  const results = await menu_klp_list.aggregate([
+    
+    {
+      $match: { menu_klp_id: klpId }
+    },
+    {
+      $lookup: {
+        from: 'menu',               // nama koleksi yang di-join
+        localField: 'menu_id',      // field di menu_klp_list
+        foreignField: 'id',         // field di menu
+        as: 'menu_info'
+      }
+    },
+    {
+      $unwind: '$menu_info' // Karena hasil $lookup berupa array
+    },
+    {
+    $sort: {
+        'menu_info.urutan': 1
+      }
+    },
+    {
+      $project: {
+        menu_id: 1,
+        menu_klp_id: 1,
+        readx: 1,
+        updatex: 1,
+        deletex: 1,
+        addx: 1,
+        // ... field lain dari menu_klp_list
+        route: '$menu_info.route'  // ambil hanya field 'route' dari join
+      }
+    }
+  ]).toArray();
+
+  if (results.length === 0) {
+    return res.status(404).json({ message: 'Menu tidak ditemukan untuk kelompok ini' });
+  }else{
+    req.menu_akses = results
+    next();
+  }
+
+}
+
 module.exports = {
      checkTokenSeetUser,
      isLoggedIn, 
+     sideMenuMidleware,
 }

@@ -7,6 +7,7 @@ const { ObjectId } = require('mongodb')
 
 
 router.post('/viewData', async (req, res, next) => {  
+
     const menu_klp = await getCollection('menu_klp'); //memilih collection yang mau di query
     const result = await menu_klp.find().sort({urutan:1}).toArray(); //query cari data
     if (result.length <= 0) {
@@ -24,40 +25,50 @@ router.post('/addData', async (req, res, next) => {
     const id_klp = datax.id;
     const list_menux = req.body.list_menu; 
     const data = flattenMenu(list_menux); // Dijadikan satu level
+
+
+    var akses_menu = req.menu_akses
+    const levelAkses = akses_menu.find(({ route }) => route === '/KlpUser');
     
-
-    const menu_klp = await getCollection('menu_klp')
-    const result = await menu_klp.insertOne({id:id_klp, uraian:datax.uraian})
- 
+    if (levelAkses.addx == 1) {
+        
+        const menu_klp = await getCollection('menu_klp')
+        const result = await menu_klp.insertOne({id:id_klp, uraian:datax.uraian})
+     
+        
+        if (result.acknowledged === true) { 
+             
     
-    if (result.acknowledged === true) { 
-         
-
-        const menu_klp_list = await getCollection('menu_klp_list');
-
-        const dataInsert = data.map(element => ({
-            id: uniqid(),
-            menu_id: element.id,
-            menu_klp_id: id_klp,
-            readx: element.readx,
-            updatex: element.updatex,
-            deletex: element.deletex,
-            addx: element.addx
-        }));
-
-        const resultx = await menu_klp_list.insertMany(dataInsert);
-        if (resultx.acknowledged) {
-            console.log(`${resultx.insertedCount} data berhasil ditambahkan.`);
-        } else {
-            console.log("InsertMany menu_klp_list gagal.");
+            const menu_klp_list = await getCollection('menu_klp_list');
+    
+            const dataInsert = data.map(element => ({
+                id: uniqid(),
+                menu_id: element.id,
+                menu_klp_id: id_klp,
+                readx: element.readx,
+                updatex: element.updatex,
+                deletex: element.deletex,
+                addx: element.addx
+            }));
+    
+            const resultx = await menu_klp_list.insertMany(dataInsert);
+            if (resultx.acknowledged) {
+                console.log(`${resultx.insertedCount} data berhasil ditambahkan.`);
+            } else {
+                console.log("InsertMany menu_klp_list gagal.");
+            } 
+    
+            res.send({ message: "Data menu klp list berhasil ditambahkan" });
+    
+        }else{
+            console.log("Data kelompok gagal ditambahkan"); 
+            return res.status(500).json({ message: "Data kelompok gagal ditambahkan" });
         } 
+        
+        
+    }    
+    
 
-        res.send({ message: "Data menu klp list berhasil ditambahkan" });
-
-    }else{
-        console.log("Data kelompok gagal ditambahkan"); 
-        return res.status(500).json({ message: "Data kelompok gagal ditambahkan" });
-    } 
 
     
 })
@@ -157,72 +168,84 @@ router.post('/editData', async (req, res, next) => {
         menu_klp_list: {}
     };
 
-    try {
-        const menu_klp = await getCollection('menu_klp');
-        const result = await menu_klp.updateOne(
-            { id: data.id },
-            { $set: { uraian: data.uraian } }
-        );
+    const req_id = data.id; // ambil id kelompok dari body request 
+    const menuCollection = await getCollection('menu');
 
-        if (!result.acknowledged) {
-            response.menu_klp.message = "Data kelompok gagal diupdate";
-        } else {
-            response.menu_klp.message = "Data kelompok berhasil diupdate";
-        }
-
-        const menu_klp_list = await getCollection('menu_klp_list');
-
-        const bulkOps = hasil_list_menu.map(element => {
-        const isNew = !element.menu_klp_list_id || element.menu_klp_list_id === '';
-        const menu_klp_list_id = isNew ? uniqid() : element.menu_klp_list_id;
-
-        return {
-            updateOne: {
-            filter: { id: menu_klp_list_id },
-            update: {
-                $set: {
-                id: menu_klp_list_id,
-                menu_id: element.id,
-                menu_klp_id: data.id,
-                readx: element.readx,
-                updatex: element.updatex,
-                deletex: element.deletex,
-                addx: element.addx
-                }
-            },
-            upsert: true
+    var akses_menu = req.menu_akses
+    const levelAkses = akses_menu.find(({ route }) => route === '/KlpUser');
+    
+    if (levelAkses.updatex == 1) {
+        // console.log('levelAkses.updatex == 1');
+        // console.log(levelAkses.updatex);
+        
+        try {
+            const menu_klp = await getCollection('menu_klp');
+            const result = await menu_klp.updateOne(
+                { id: data.id },
+                { $set: { uraian: data.uraian } }
+            );
+    
+            if (!result.acknowledged) {
+                response.menu_klp.message = "Data kelompok gagal diupdate";
+            } else {
+                response.menu_klp.message = "Data kelompok berhasil diupdate";
             }
-        };
-        });
-
-        const hasil_bulkWrite = await menu_klp_list.bulkWrite(bulkOps);
-
-        response.menu_klp_list.insertedCount = hasil_bulkWrite.upsertedCount;
-        response.menu_klp_list.updatedCount = hasil_bulkWrite.modifiedCount;
-
-        const total = hasil_bulkWrite.modifiedCount + hasil_bulkWrite.upsertedCount;
-
-        let messageParts = [];
-
-        if (result.acknowledged) {
-            messageParts.push("Data kelompok berhasil diupdate");
-        } else {
-            messageParts.push("Data kelompok gagal diupdate");
+    
+            const menu_klp_list = await getCollection('menu_klp_list');
+    
+            const bulkOps = hasil_list_menu.map(element => {
+            const isNew = !element.menu_klp_list_id || element.menu_klp_list_id === '';
+            const menu_klp_list_id = isNew ? uniqid() : element.menu_klp_list_id;
+    
+            return {
+                updateOne: {
+                filter: { id: menu_klp_list_id },
+                update: {
+                    $set: {
+                    id: menu_klp_list_id,
+                    menu_id: element.id,
+                    menu_klp_id: data.id,
+                    readx: element.readx,
+                    updatex: element.updatex,
+                    deletex: element.deletex,
+                    addx: element.addx
+                    }
+                },
+                upsert: true
+                }
+            };
+            });
+    
+            const hasil_bulkWrite = await menu_klp_list.bulkWrite(bulkOps);
+    
+            response.menu_klp_list.insertedCount = hasil_bulkWrite.upsertedCount;
+            response.menu_klp_list.updatedCount = hasil_bulkWrite.modifiedCount;
+    
+            const total = hasil_bulkWrite.modifiedCount + hasil_bulkWrite.upsertedCount;
+    
+            let messageParts = [];
+    
+            if (result.acknowledged) {
+                messageParts.push("Data kelompok berhasil diupdate");
+            } else {
+                messageParts.push("Data kelompok gagal diupdate");
+            }
+    
+            if (total > 0) {
+                messageParts.push(`${total} data menu_klp_list berhasil diupdate atau ditambahkan`);
+            } else {
+                messageParts.push("Tidak ada perubahan data menu_klp_list");
+            }
+    
+            res.status(200).json({ message: messageParts.join(". ") + "." });
+    
+    
+        } catch (err) {
+            console.error("Error saat editData:", err);
+            res.status(500).json({ message: "Terjadi kesalahan saat memproses data.", error: err.message });
         }
-
-        if (total > 0) {
-            messageParts.push(`${total} data menu_klp_list berhasil diupdate atau ditambahkan`);
-        } else {
-            messageParts.push("Tidak ada perubahan data menu_klp_list");
-        }
-
-        res.status(200).json({ message: messageParts.join(". ") + "." });
-
-
-    } catch (err) {
-        console.error("Error saat editData:", err);
-        res.status(500).json({ message: "Terjadi kesalahan saat memproses data.", error: err.message });
     }
+
 
 })
 
@@ -230,27 +253,34 @@ router.post('/removeData', async (req, res, next) => {
     const data = req.body.data;
     console.log(data);
 
-    const menu_klp = await getCollection('menu_klp');
-    const menu_klp_list = await getCollection('menu_klp_list');
+    var akses_menu = req.menu_akses
+    const levelAkses = akses_menu.find(({ route }) => route === '/KlpUser');
 
-    const resultKlp = await menu_klp.deleteOne({ id: data.id });
-    const resultList = await menu_klp_list.deleteMany({ menu_klp_id: data.id });
-
-    let message = [];
-
-    if (resultKlp.deletedCount > 0) {
-    message.push("Data kelompok berhasil dihapus");
-    } else {
-    message.push("Data kelompok tidak ditemukan");
+    if (levelAkses.deletex == 1) { 
+        
+        const menu_klp = await getCollection('menu_klp');
+        const menu_klp_list = await getCollection('menu_klp_list');
+    
+        const resultKlp = await menu_klp.deleteOne({ id: data.id });
+        const resultList = await menu_klp_list.deleteMany({ menu_klp_id: data.id });
+    
+        let message = [];
+    
+        if (resultKlp.deletedCount > 0) {
+        message.push("Data kelompok berhasil dihapus");
+        } else {
+        message.push("Data kelompok tidak ditemukan");
+        }
+    
+        if (resultList.deletedCount > 0) {
+        message.push(`${resultList.deletedCount} data menu kelompok list berhasil dihapus`);
+        } else {
+        message.push("Tidak ada data menu kelompok list yang dihapus");
+        }
+    
+        res.status(200).json({ message: message.join(". ") + "." }); 
     }
 
-    if (resultList.deletedCount > 0) {
-    message.push(`${resultList.deletedCount} data menu kelompok list berhasil dihapus`);
-    } else {
-    message.push("Tidak ada data menu kelompok list yang dihapus");
-    }
-
-    res.status(200).json({ message: message.join(". ") + "." }); 
 })
 
 
@@ -282,7 +312,7 @@ router.get('/listMenu', async (req, res, next) => {
                     ...item,
                     ...(children.length > 0 && { child: children }) // hanya tambahkan jika tidak kosong
                 };
-                });            
+                });
             res.send(nest(result))
             
 })
@@ -299,6 +329,83 @@ router.post('/autocomplete', async (req, res, next) => {
     }
 })
 
+
+router.post('/listSidebar', async(req, res, next) =>{
+    const klpId = parseInt(req.user.auth.authorization) 
+    const menuCollection = await getCollection('menu');
+
+    const result = await menuCollection.aggregate([
+    {
+        $lookup: {
+        from: 'menu_klp_list',
+        let: { menuId: '$id' },
+        pipeline: [
+            {
+            $match: {
+                $expr: {
+                $and: [
+                    { $eq: ['$menu_id', '$$menuId'] },
+                    { $eq: ['$menu_klp_id', klpId] }
+                ]
+                }
+            }
+            },
+            { $limit: 1 } // ambil satu saja karena LEFT JOIN
+        ],
+        as: 'menu_klp_data'
+        }
+    },
+    {
+        $unwind: {
+        path: '$menu_klp_data',
+        preserveNullAndEmptyArrays: true // ini yang bikin LEFT JOIN
+        }
+    },
+    {
+        $addFields: {
+            menu_klp_id: '$menu_klp_data.menu_klp_id',
+            menu_klp_list_id: '$menu_klp_data.id',
+            readx: { $ifNull: ['$menu_klp_data.readx', false] },
+            updatex: { $ifNull: ['$menu_klp_data.updatex', false] },
+            deletex: { $ifNull: ['$menu_klp_data.deletex', false] },
+            addx: { $ifNull: ['$menu_klp_data.addx', false] }
+        }
+    },
+    {
+        $match: {
+           $or: [
+            { readx: true },
+            { updatex: true },
+            { deletex: true },
+            { addx: true } ]
+           }
+    },
+    {
+        $project: {
+        menu_klp_data: 0 // sembunyikan join-an mentah
+        }
+    },
+    {
+        $sort: {
+        urutan: 1 // urut berdasarkan menu.urutan
+        }
+    }
+    ]).toArray();
+
+    const nest = (items, id = null, link = 'parent') =>
+    items
+        .filter(item => item[link] === id)
+        .map(item => {
+        const children = nest(items, item.id, link);
+        return {
+            ...item,
+            ...(children.length > 0 && { child: children }) // hanya tambahkan jika tidak kosong
+        };
+    });
+    res.send(nest(result))
+    
+
+})
 
 const responQuery = async (result, req, res, next, successMessage, errorMessage) => {
     try {
