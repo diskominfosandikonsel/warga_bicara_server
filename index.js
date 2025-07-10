@@ -163,14 +163,36 @@ async function startSecretLoop() {
   app.use('/api/v1/admin_profile', middleware.isLoggedIn, profile_admin);                   //REGIS ADMIN
   
   // =========================== MASTER ===========================
-  const master_alasanHapusAkun = require('./api/master/master_alasanHapusAkun');
-  app.use('/api/v1/master_alasanHapusAkun', middleware.isLoggedIn, master_alasanHapusAkun); //MASTER ALASAN HAPUS AKUN
+ 
 
   const listMenu = require('./api/listMenu/listMenu');
   app.use('/api/v1/listMenu', middleware.isLoggedIn, middleware.sideMenuMidleware, listMenu);
 
   const klp_users = require('./api/kelompok_user/klp_users');
   app.use('/api/v1/klp_users', middleware.isLoggedIn, middleware.sideMenuMidleware, klp_users);
+
+  const master_prov = require('./api/master/master_prov');
+  app.use('/api/v1/master_prov', middleware.isLoggedIn, master_prov);
+
+  const master_kabupaten = require('./api/master/master_kabupaten')
+  app.use('/api/v1/master_kabupaten', middleware.isLoggedIn, master_kabupaten)
+  const master_kecamatan = require('./api/master/master_kecamatan')
+  app.use('/api/v1/master_kecamatan', middleware.isLoggedIn, master_kecamatan)
+  const master_deskel = require('./api/master/master_deskel')
+  app.use('/api/v1/master_deskel', middleware.isLoggedIn, master_deskel)
+
+  const master_pendidikan = require('./api/master/master_pendidikan')
+  app.use('/api/v1/master_pendidikan', middleware.isLoggedIn, master_pendidikan)
+  const master_pekerjaan = require('./api/master/master_pekerjaan')
+  app.use('/api/v1/master_pekerjaan', middleware.isLoggedIn, master_pekerjaan)
+  const master_jeniskelamin = require('./api/master/master_jeniskelamin')
+  app.use('/api/v1/master_jeniskelamin', middleware.isLoggedIn, master_jeniskelamin)
+  const master_alasanHapusAkun = require('./api/master/master_alasanHapusAkun')
+  app.use('/api/v1/master_alasanHapusAkun', middleware.isLoggedIn, master_alasanHapusAkun) //MASTER ALASAN HAPUS AKUN
+  const master_agama = require('./api/master/master_agama')
+  app.use('/api/v1/master_agama', middleware.isLoggedIn, master_agama)
+
+  
   // =========================== MASTER ===========================
 
 

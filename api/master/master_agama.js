@@ -5,7 +5,7 @@ const uniqid = require('uniqid')
 
 router.post('/autocomplete', async (req, res, next) => {
   try {
-    const master_alasanHapusAkun = await getCollection('master_alasanHapusAkun');
+    const master_agama = await getCollection('master_agama');
 
     // Ambil keyword dari body, dan pastikan berbentuk string
     const { cari} = req.body;
@@ -16,7 +16,7 @@ router.post('/autocomplete', async (req, res, next) => {
       : {};
 
     // Ambil data maksimal 10 untuk keperluan autocomplete
-    const result = await master_alasanHapusAkun
+    const result = await master_agama
       .find(filter)
       .sort({ urutan: 1 })
       .limit(10)
@@ -35,7 +35,7 @@ router.post('/autocomplete', async (req, res, next) => {
 
 router.post('/viewData', async (req, res, next) => {
   try {
-    const master_alasanHapusAkun = await getCollection('master_alasanHapusAkun');
+    const master_agama = await getCollection('master_agama');
 
     // Ambil query dari body request
     const { cari, page, limit } = req.body;
@@ -46,13 +46,13 @@ router.post('/viewData', async (req, res, next) => {
       : {};
 
     // Hitung total data untuk keperluan pagination
-    const totalItems = await master_alasanHapusAkun.countDocuments(filter);
+    const totalItems = await master_agama.countDocuments(filter);
 
     // Hitung skip berdasarkan page & limit
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Query dengan filter, sort ascending by `uraian`, paginasi
-    const result = await master_alasanHapusAkun
+    const result = await master_agama
       .find(filter)
       .sort({ uraian: 1 })
       .skip(skip)
@@ -78,15 +78,15 @@ router.post('/viewData', async (req, res, next) => {
 router.post('/addData', async (req, res, next) => {
     const data = req.body; 
           data.id = uniqid(); //generate id unik
-    const master_alasanHapusAkun = await getCollection('master_alasanHapusAkun');
-    const result = await master_alasanHapusAkun.insertOne(data);
+    const master_agama = await getCollection('master_agama');
+    const result = await master_agama.insertOne(data);
     responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
 })
 
 router.post('/editData', async (req, res, next) => {
     const data = req.body; 
-    const master_alasanHapusAkun = await getCollection('master_alasanHapusAkun');
-    const result = await master_alasanHapusAkun.updateOne({ id :data.id }, 
+    const master_agama = await getCollection('master_agama');
+    const result = await master_agama.updateOne({ id :data.id }, 
         { $set: { 
                     uraian         : data.uraian              
                 }
@@ -96,8 +96,8 @@ router.post('/editData', async (req, res, next) => {
 
 router.post('/removeData', async (req, res, next) => {
     const data = req.body;
-    const master_alasanHapusAkun = await getCollection('master_alasanHapusAkun');
-    const result = await master_alasanHapusAkun.deleteOne({ id: data.id });
+    const master_agama = await getCollection('master_agama');
+    const result = await master_agama.deleteOne({ id: data.id });
     responQuery(result, req, res, next, "Data berhasil dihapus", "Data gagal dihapus");
 })
 
@@ -164,44 +164,4 @@ const responQuery = async (result, req, res, next, successMessage, errorMessage)
 
 };
 
-
-router.get('/getView', async (req, res, next) => { 
-    console.log('getView');
-    
-    
-    const master_alasanHa = await getCollection('master_alasanHapusAkun'); //memilih collection yang mau di query
-    const result = await master_alasanHa.find().toArray(); //query cari data
-    if (result.length <= 0 ) {
-        res.status(404).json({message: "Data tidak ditemukan"})
-    } else {
-        res.status(200).json({
-            data:result
-
-        });
-    }
-})
-
-router.get('/getData', async (req, res, next) => {  
-    const master_alasanHa = await getCollection('hapus_akun'); //memilih collection yang mau di query
-    const result = await master_alasanHa.aggregate([
-        {
-            $lookup: {
-            from: "master_alasanHapusAkun",           // koleksi yang ingin dijoin
-            localField: "hapus_akun_id", // field referensi di collection1
-            foreignField: "id", // field yang dicocokkan di collection2
-            as: "uraian_alasan"    // nama field hasil join (berisi array)
-            }
-        } 
-    ]).toArray()
-
-    if (result.length <= 0 ) {
-        res.status(404).json({message: "Data tidak ditemukan"})     
-    } else {
-        res.status(200).json({
-            data:result
-        });
-    } 
-})
-
-
-module.exports = router;
+module.exports = router
