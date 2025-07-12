@@ -20,8 +20,14 @@ router.post('/list', async(req, res, next) =>{
     }
 
     var query = `   
-                    SELECT * 
+                    SELECT master_kecamatan.*,
+                    master_kabupaten.nama_kabupaten AS nama_kabupaten,
+                    master_provinsi.nama_provinsi AS nama_provinsi
                     FROM master_kecamatan 
+                    LEFT JOIN master_kabupaten 
+                    ON master_kecamatan.kabupaten_id = master_kabupaten.kabupaten_id
+                    LEFT JOIN master_provinsi 
+                    ON master_kabupaten.provinsi_id = master_provinsi.provinsi_id
                     WHERE master_kecamatan.kabupaten_id = `+data.kabupaten_id+`
                     `+filter+`
                     ORDER BY master_kecamatan.nama_kecamatan ASC 

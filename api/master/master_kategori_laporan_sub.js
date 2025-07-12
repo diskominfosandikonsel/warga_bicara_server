@@ -64,32 +64,79 @@ router.post('/autocomplete', async (req, res, next) => {
 });
 
 router.post('/viewData', async (req, res, next) => {
-  try {
+  
+  // try {
+  //   const master_kategori_laporan_sub = await getCollection('master_kategori_laporan_sub');
+
+  //   // Ambil query dari body request
+  //   const { cari, page, limit } = req.body;
+
+  //   // Buat filter pencarian berdasarkan `uraian` jika ada keyword
+  //   const filter = cari
+  //     ? { uraian: { $regex: cari, $options: 'i' } } // case-insensitive
+  //     : {};
+
+  //   // Hitung total data untuk keperluan pagination
+  //   const totalItems = await master_kategori_laporan_sub.countDocuments(filter);
+
+  //   // Hitung skip berdasarkan page & limit
+  //   const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  //   // Query dengan filter, sort ascending by `uraian`, paginasi
+  //   const result = await master_kategori_laporan_sub
+  //     .find(filter)
+  //     .sort({ uraian: 1 })
+  //     .skip(skip)
+  //     .limit(parseInt(limit))
+  //     .toArray();
+
+  //   if (result.length <= 0) {
+  //     res.status(404).json({ message: "Data tidak ditemukan" });
+  //   } else {
+  //     res.json({
+  //       data: result,
+  //       totalItems,
+  //       currentPage: parseInt(page),
+  //       totalPages: Math.ceil(totalItems / parseInt(limit)),
+  //     });
+  //   }
+  // } catch (err) {
+  //   console.error(err);
+  //   res.status(500).json({ message: "Terjadi kesalahan pada server" });
+  // }
+
+try {
     const master_kategori_laporan_sub = await getCollection('master_kategori_laporan_sub');
 
-    // Ambil query dari body request
     const { cari, page, limit } = req.body;
-
-    // Buat filter pencarian berdasarkan `uraian` jika ada keyword
-    const filter = cari
-      ? { uraian: { $regex: cari, $options: 'i' } } // case-insensitive
-      : {};
-
-    // Hitung total data untuk keperluan pagination
-    const totalItems = await master_kategori_laporan_sub.countDocuments(filter);
-
-    // Hitung skip berdasarkan page & limit
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Query dengan filter, sort ascending by `uraian`, paginasi
-    const result = await master_kategori_laporan_sub
-      .find(filter)
-      .sort({ uraian: 1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .toArray();
+    // Buat filter pencarian
+    const matchStage = cari
+      ? { uraian: { $regex: cari, $options: 'i' } }
+      : {};
 
-    if (result.length <= 0) {
+    // Hitung total dokumen setelah filter
+    const totalItems = await master_kategori_laporan_sub.countDocuments(matchStage);
+
+    // Pipeline agregasi
+    const result = await master_kategori_laporan_sub.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'master_kategori_laporan', // nama collection yang dijoin
+          localField: 'master_kategori_laporan_id', // field dari collection utama
+          foreignField: 'id', // field dari collection yang dijoin
+          as: 'master_kategori_laporan'
+        }
+      },
+      { $unwind: '$master_kategori_laporan' }, // jika ingin hasil berupa objek, bukan array
+      { $sort: { uraian: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ]).toArray();
+
+    if (result.length === 0) {
       res.status(404).json({ message: "Data tidak ditemukan" });
     } else {
       res.json({
@@ -103,7 +150,8 @@ router.post('/viewData', async (req, res, next) => {
     console.error(err);
     res.status(500).json({ message: "Terjadi kesalahan pada server" });
   }
-});
+
+})
 
 router.post('/addData', async (req, res, next) => {
     const data = req.body; 

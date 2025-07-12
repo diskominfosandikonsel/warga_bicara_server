@@ -20,8 +20,11 @@ router.post('/list', async(req, res, next) =>{
     }
 
     var query = `   
-                    SELECT * 
+                    SELECT master_kabupaten.*,
+                    master_provinsi.nama_provinsi AS nama_provinsi 
                     FROM master_kabupaten 
+                    LEFT JOIN master_provinsi 
+                    ON master_kabupaten.provinsi_id = master_provinsi.provinsi_id
                     `+filter+`
                     ORDER BY master_kabupaten.nama_kabupaten ASC 
                 `
