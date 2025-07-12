@@ -140,39 +140,39 @@ async function startSecretLoop() {
 
 
   
-  const checkAuth = require('./auth/cekMidleware');
-  app.use('/checkAuth', middleware.isLoggedIn, checkAuth);
+  const checkAuth = require('./auth/cekMidleware')
+  app.use('/checkAuth', middleware.isLoggedIn, checkAuth)
   // =========================== CLIENT ===========================
   const authClient = require('./auth/client')
-  app.use('/api/v1/authClient', authClient);                        //AUTH MASYARAKAT
+  app.use('/api/v1/authClient', authClient)                        //AUTH MASYARAKAT
 
-  const profileMasyarakat = require('./api/profile/profile_client');
-  app.use('/api/v1/client_profile', middleware.isLoggedIn, profileMasyarakat);            
+  const profileMasyarakat = require('./api/profile/profile_client')
+  app.use('/api/v1/client_profile', middleware.isLoggedIn, profileMasyarakat)
 
   // =========================== CLIENT ===========================
 
   // =========================== ADMIN ===========================
 
   const authAdmin = require('./auth/admin')
-  app.use('/api/v1/authAdmin', authAdmin);                                                  //AUTH ADMIN 
+  app.use('/api/v1/authAdmin', authAdmin)                                                  //AUTH ADMIN 
 
-  const registration = require('./auth/admin/registration');
-  app.use('/api/v1/authAdmin/registration', middleware.isLoggedIn, registration);           //REGIS ADMIN
+  const registration = require('./auth/admin/registration')
+  app.use('/api/v1/authAdmin/registration', middleware.isLoggedIn, registration)           //REGIS ADMIN
 
-  const profile_admin = require('./api/profile/profile_admin');
-  app.use('/api/v1/admin_profile', middleware.isLoggedIn, profile_admin);                   //REGIS ADMIN
+  const profile_admin = require('./api/profile/profile_admin')
+  app.use('/api/v1/admin_profile', middleware.isLoggedIn, profile_admin)                   //REGIS ADMIN
   
   // =========================== MASTER ===========================
  
 
-  const listMenu = require('./api/listMenu/listMenu');
+  const listMenu = require('./api/listMenu/listMenu')
   app.use('/api/v1/listMenu', middleware.isLoggedIn, middleware.sideMenuMidleware, listMenu);
 
-  const klp_users = require('./api/kelompok_user/klp_users');
+  const klp_users = require('./api/kelompok_user/klp_users')
   app.use('/api/v1/klp_users', middleware.isLoggedIn, middleware.sideMenuMidleware, klp_users);
 
-  const master_prov = require('./api/master/master_prov');
-  app.use('/api/v1/master_prov', middleware.isLoggedIn, master_prov);
+  const master_prov = require('./api/master/master_prov')
+  app.use('/api/v1/master_prov', middleware.isLoggedIn, master_prov)
 
   const master_kabupaten = require('./api/master/master_kabupaten')
   app.use('/api/v1/master_kabupaten', middleware.isLoggedIn, master_kabupaten)
@@ -191,6 +191,13 @@ async function startSecretLoop() {
   app.use('/api/v1/master_alasanHapusAkun', middleware.isLoggedIn, master_alasanHapusAkun) //MASTER ALASAN HAPUS AKUN
   const master_agama = require('./api/master/master_agama')
   app.use('/api/v1/master_agama', middleware.isLoggedIn, master_agama)
+  const master_kategori_laporan = require('./api/master/master_kategori_laporan')
+  app.use('/api/v1/master_kategori_laporan', middleware.isLoggedIn, master_kategori_laporan)
+  const master_kategori_laporan_sub = require('./api/master/master_kategori_laporan_sub')
+  app.use('/api/v1/master_kategori_laporan_sub', middleware.isLoggedIn, master_kategori_laporan_sub)
+
+  const master_unit_kerja = require('./api/master/master_unit_kerja')
+  app.use('/api/v1/master_unit_kerja', middleware.isLoggedIn, master_unit_kerja)
 
   
   // =========================== MASTER ===========================

@@ -7,14 +7,14 @@ var db  = mysql.createPool({
     host     : process.env.HOST_DB_MYSQL,
     user     : process.env.USER_DB_MYSQL,
     password : process.env.PASS_DB_MYSQL,
-    database : 'egov'
+    database : 'simpeg'
 });
 
 db.getConnection((err)=>{
     if(err){
         console.log(err);
     }else{
-        console.log('terkoneksi DATABASE EGOV');
+        console.log('terkoneksi DATABASE SIMPEG');
     }
 })
 
