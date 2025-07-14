@@ -199,6 +199,9 @@ async function startSecretLoop() {
   const master_unit_kerja = require('./api/master/master_unit_kerja')
   app.use('/api/v1/master_unit_kerja', middleware.isLoggedIn, master_unit_kerja)
 
+  const master_client_autocomplete = require('./api/master/master_client_autocomplete')
+  app.use('/api/v1/master_client_autocomplete', middleware.isLoggedIn, master_client_autocomplete)
+
   
   // =========================== MASTER ===========================
 
