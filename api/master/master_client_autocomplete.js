@@ -369,3 +369,5 @@ router.post('/autocomplete_jenis_pendidikan', async (req, res, next) => {
   }
 });
 // ========== JENIS PENDIDIKAN ==========
+
+module.exports = router
