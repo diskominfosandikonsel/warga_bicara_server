@@ -59,7 +59,7 @@ router.post('/signup', async (req, res, next) => {
                 $or: [
                     { email     : req.body.email },
                     { username  : req.body.username },
-                    { nik       : req.body.nik }
+                    { nip       : req.body.nip }
                 ]
             });
             if (!existingUser) {
@@ -75,10 +75,10 @@ router.post('/signup', async (req, res, next) => {
                     alamat                      : req.body.alamat,
                     master_jk_id                : req.body.master_jk_id,
                     tgl_lahir                   : req.body.tgl_lahir,
-                    master_prov_id              : req.body.master_prov_id,
-                    master_kab_id               : req.body.master_kab_id,
-                    master_kec_id               : req.body.master_kec_id,
-                    master_deskel_id            : req.body.master_deskel_id,
+                    // master_prov_id              : req.body.master_prov_id,
+                    // master_kab_id               : req.body.master_kab_id,
+                    // master_kec_id               : req.body.master_kec_id,
+                    // master_deskel_id            : req.body.master_deskel_id,
                     master_agama_id             : req.body.master_agama_id,
                     master_pekerjaan_id         : req.body.master_pekerjaan_id,
                     master_pendidikan_id        : req.body.master_pendidikan_id,
