@@ -211,8 +211,8 @@ async function startSecretLoop() {
   
   // =========================== ADMIN ===========================
   
-  const postingan_laporan = require('./api/postingan_laporan/postingan_laporan')
-  app.use('/api/v1/postingan_laporan', middleware.isLoggedIn, postingan_laporan)
+  const postingan_laporan = require('./api/postingan_laporan/postingan_laporan_android')
+  app.use('/postingan_laporan_android', middleware.isLoggedIn, postingan_laporan)
   
 
 // API START HERE ==========================
