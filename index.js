@@ -202,13 +202,18 @@ async function startSecretLoop() {
   const master_client_autocomplete = require('./api/master/master_client_autocomplete')
   app.use('/api/v1/master_client_autocomplete', master_client_autocomplete)
 
+
+  
   
   // =========================== MASTER ===========================
-
-
-
+  
+  
+  
   // =========================== ADMIN ===========================
-
+  
+  const postingan_laporan = require('./api/postingan_laporan/postingan_laporan')
+  app.use('/api/v1/postingan_laporan', middleware.isLoggedIn, postingan_laporan)
+  
 
 // API START HERE ==========================
 
