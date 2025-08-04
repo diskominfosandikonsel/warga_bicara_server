@@ -7,6 +7,7 @@ var upload = require('../../library/multer/fileMulter');
 const IMAGE = require('../../library/multer/image');
 
 const { ObjectId } = require('mongodb');
+const id = require('volleyball/lib/id');
 
 
 
@@ -19,6 +20,7 @@ router.post('/viewData', async (req, res, next) => {
     const page = parseInt(req.body.page) || 1;
     const limit = 10;
     const cari = req.body.cari || '';
+    
 
     const pipeline = [
       {
@@ -26,6 +28,7 @@ router.post('/viewData', async (req, res, next) => {
           title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
         }
       },
+
       {
         $lookup: {
           from: 'lampiran',
@@ -44,9 +47,19 @@ router.post('/viewData', async (req, res, next) => {
           ],
           as: 'lampiran'
         }
-      },
+      }, 
+
       {
-        $sort: { createdAt: -1 } // sorting terbaru dulu
+        $lookup: {
+          from: 'post_lokasi',
+          localField: 'id',      // field di koleksi post
+          foreignField: 'post_id', // field di koleksi post_lokasi
+          as: 'lokasi'
+        }
+      },
+
+      {
+        $sort: { createdAt: -1 }
       },
       {
         $skip: (page - 1) * limit
@@ -57,6 +70,9 @@ router.post('/viewData', async (req, res, next) => {
     ];
 
     const results = await post.aggregate(pipeline).toArray();
+
+    console.log(results);
+    
 
     // Hitung total data (tanpa $skip dan $limit)
     const totalData = await post.countDocuments({
@@ -107,12 +123,46 @@ async function simpanfile(datafile, idLaporan) {
     throw error;
   }
 }
+async function simpanLokasi(data, idnya) {
+  try {
+
+    console.log("simpanLokasi");
+    console.log(data);
+    
+
+    var payload = {
+      _id: new ObjectId(), // MongoDB ObjectId
+      id: uniqid(), // Custom ID
+      post_id: idnya,           // ID dari laporan
+      lat: data.lat,   // Latitude
+      lng: data.lng  // Longitude
+    }
+
+
+            const post_lokasi = await getCollection('post_lokasi');
+            await post_lokasi.insertOne(payload);
+            // responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
+
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan simpanLokasi:", error);
+    throw error;
+  }
+}
 
 
 router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+  
 
-    const data = JSON.parse(req.body.data); 
-    data.id = uniqid();
+    var data = JSON.parse(req.body.data); 
+
+    data.id = uniqid()
+    data.status = 1
+    data.publish = false
+    data.finalisasi = false
+    data.created_at = new Date()
+    // console.log(typeof data);
+    // console.log(data);
 
     try {
         const uploadedFiles = req.files['file']; 
@@ -120,7 +170,16 @@ router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (r
         if (uploadedFiles && uploadedFiles.length > 0) {
             // Jika ada file yang diupload, lakukan sesuatu dengan file tersebut
             // console.log('File yang diterima:', uploadedFiles.length); 
-            await simpanfile(uploadedFiles, data.id);  
+            var uploadfile =  await simpanfile(uploadedFiles, data.id);
+            if(uploadfile===false){
+              console.log('Gagal menyimpan file');
+            }
+
+            var simpanLokasix = await simpanLokasi(data, data.id);
+            if(simpanLokasix===false){
+              console.log('Gagal menyimpan lokasi');
+            }
+
             const listMenu = await getCollection('post');
             const result = await listMenu.insertOne(data);
             responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
