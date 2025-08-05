@@ -58,6 +58,28 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
+        {
+    $lookup: {
+      from: 'users',
+      localField: 'user_id',
+      foreignField: 'id',
+      as: 'createdBy'
+    }
+  },
+
+  {
+    $unwind: {
+      path: '$createdBy',
+      preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
+    }
+  },
+
+  {
+    $addFields: {
+      createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
+    }
+  },
+
       {
         $sort: { createdAt: -1 }
       },
