@@ -25,6 +25,7 @@ router.post('/viewData', async (req, res, next) => {
           title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
         }
       },
+
       {
         $lookup: {
           from: 'lampiran',
@@ -43,9 +44,41 @@ router.post('/viewData', async (req, res, next) => {
           ],
           as: 'lampiran'
         }
-      },
+      }, 
+
       {
-        $sort: { createdAt: -1 } // sorting terbaru dulu
+        $lookup: {
+          from: 'post_lokasi',
+          localField: 'id',      // field di koleksi post
+          foreignField: 'post_id', // field di koleksi post_lokasi
+          as: 'lokasi'
+        }
+      },
+
+        {
+    $lookup: {
+      from: 'users',
+      localField: 'user_id',
+      foreignField: 'id',
+      as: 'createdBy'
+    }
+  },
+
+  {
+    $unwind: {
+      path: '$createdBy',
+      preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
+    }
+  },
+
+  {
+    $addFields: {
+      createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
+    }
+  },
+
+      {
+        $sort: { createdAt: -1 }
       },
       {
         $skip: (page - 1) * limit

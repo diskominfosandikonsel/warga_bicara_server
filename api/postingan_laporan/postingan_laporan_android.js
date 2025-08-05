@@ -25,6 +25,7 @@ router.post('/viewData', async (req, res, next) => {
     const pipeline = [
       {
         $match: {
+          user_id: req.user.id,
           title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
         }
       },
