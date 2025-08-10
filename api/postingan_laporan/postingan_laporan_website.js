@@ -108,6 +108,64 @@ router.post('/viewData', async (req, res, next) => {
 })
 
 
+router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+  const data = JSON.parse(req.body.data); // body: { id: "...", nama: "...", dst }
+  const idLaporan = data.id;
+
+  try {
+    const post = await getCollection('post');
+    const lampiran = await getCollection('lampiran');
+
+    // Update data utama
+    const resultUpdate = await post.updateOne(
+      { id: idLaporan },
+      { $set: data }
+    );
+
+    // Kalau ada file baru
+    const uploadedFiles = req.files['file'];
+    if (uploadedFiles && uploadedFiles.length > 0) {
+
+      // Ambil file lama dari database
+      const fileLama = await lampiran.find({ tabel: 'post', tabel_id: idLaporan }).toArray();
+
+      // Hapus file lama dari folder
+      fileLama.forEach(item => {
+        IMAGE.hapus_file(item.file);                     // file asli
+        IMAGE.hapus_file(item.filethumbnail);            // thumbnail-nya
+      });
+
+      // Hapus record file lama dari DB
+      await lampiran.deleteMany({ tabel: 'post', tabel_id: idLaporan });
+
+      // Simpan file baru
+      await simpanfile(uploadedFiles, idLaporan);
+    }
+
+    responQuery(resultUpdate, req, res, next, "Data berhasil diubah", "Data gagal diubah");
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+
+router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+  // Tambah data opd penerima
+  // Delegasi Aduan = 2
+})
+
+
+router.post('/tolakAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+ 
+});
+
+router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+  // Tambah data opd penerima
+  // Delegasi Aduan = 2
+})
+
 
 
 
