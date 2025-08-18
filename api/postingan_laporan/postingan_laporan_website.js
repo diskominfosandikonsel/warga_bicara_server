@@ -134,11 +134,36 @@ async function simpanupdateKeterangan(data, idnya, req) {
   }
 }
 
+async function delegasikeopd(data, idnya) {
+  try {
+
+    console.log("delegasikeopd");
+    console.log(data);
+    
+
+    var payload = {
+      _id: new ObjectId(), // MongoDB ObjectId
+      id: uniqid(), // Custom ID
+      post_id: idnya,           // ID dari laporan
+      master_unit_kerja_id: data.unit_kerja_id,   // Latitude
+      status: data.status  // Longitude
+    }
+
+
+    const post_handle = await getCollection('post_handle');
+    await post_handle.insertOne(payload);
+    // responQuery(post_handle, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
+
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan simpanLokasi:", error);
+    throw error;
+  }
+}
+
 
 
 router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  console.log(req.body);
-
     const data = req.body; 
           data.status = 3; // Status 3 = Ditolak
     const post = await getCollection('post');
@@ -162,6 +187,29 @@ router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]),
 router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
   // Tambah data opd penerima
   // Delegasi Aduan = 2
+  console.log(req.body);
+
+    const data = req.body; 
+          data.status = 2; // Status 2 = Diterima
+          data.keterangan = "";
+    const post = await getCollection('post');
+    const result = await post.updateOne({ id :data.id }, 
+        { $set: { 
+                    status         : data.status, // Status 2 = Delegasi              
+                }
+        }) 
+
+    var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+    if(simpanKeterangan===false){
+      console.log('Gagal menyimpan keterangan');
+    }
+
+    var delegasikeopdx = await delegasikeopd(data, data.id, req)
+    if(delegasikeopdx===false){
+      console.log('Gagal delegasikeopd');
+    }
+    responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan");   
+  
 })
 
 
