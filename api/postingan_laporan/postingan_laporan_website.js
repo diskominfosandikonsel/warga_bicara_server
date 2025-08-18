@@ -55,6 +55,15 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
+      {
+        $lookup: {
+          from: 'post_keterangan',
+          localField: 'id',         // field di koleksi post
+          foreignField: 'post_id',  // field di koleksi post_keterangan
+          as: 'post_keterangan'
+        }
+      },      
+
         {
     $lookup: {
       from: 'users',
@@ -108,46 +117,45 @@ router.post('/viewData', async (req, res, next) => {
 })
 
 
-router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  const data = JSON.parse(req.body.data); // body: { id: "...", nama: "...", dst }
-  const idLaporan = data.id;
-
-  try {
-    const post = await getCollection('post');
-    const lampiran = await getCollection('lampiran');
-
-    // Update data utama
-    const resultUpdate = await post.updateOne(
-      { id: idLaporan },
-      { $set: data }
-    );
-
-    // Kalau ada file baru
-    const uploadedFiles = req.files['file'];
-    if (uploadedFiles && uploadedFiles.length > 0) {
-
-      // Ambil file lama dari database
-      const fileLama = await lampiran.find({ tabel: 'post', tabel_id: idLaporan }).toArray();
-
-      // Hapus file lama dari folder
-      fileLama.forEach(item => {
-        IMAGE.hapus_file(item.file);                     // file asli
-        IMAGE.hapus_file(item.filethumbnail);            // thumbnail-nya
-      });
-
-      // Hapus record file lama dari DB
-      await lampiran.deleteMany({ tabel: 'post', tabel_id: idLaporan });
-
-      // Simpan file baru
-      await simpanfile(uploadedFiles, idLaporan);
-    }
-
-    responQuery(resultUpdate, req, res, next, "Data berhasil diubah", "Data gagal diubah");
-
-  } catch (err) {
-    next(err);
+async function simpanupdateKeterangan(data, idnya, req) {
+  try { 
+    const post = await getCollection('post_keterangan');
+    await post.updateOne({ post_id :idnya }, 
+        { $set: { 
+                    status         : data.status, // Status 3 = Ditolak              
+                    keterangan     : data.keterangan,
+                    user_id        : req.user.id
+                }
+        })
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan simpanLokasi:", error);
+    throw error;
   }
+}
+
+
+
+router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+  console.log(req.body);
+
+    const data = req.body; 
+          data.status = 3; // Status 3 = Ditolak
+    const post = await getCollection('post');
+    const result = await post.updateOne({ id :data.id }, 
+        { $set: { 
+                    status         : data.status, // Status 3 = Ditolak              
+                }
+        }) 
+
+    var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+    if(simpanKeterangan===false){
+      console.log('Gagal menyimpan keterangan');
+    }
+    responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan"); 
+ 
 });
+
 
 
 

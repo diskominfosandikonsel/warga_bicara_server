@@ -15,6 +15,10 @@ const id = require('volleyball/lib/id');
 
 
 router.post('/viewData', async (req, res, next) => { 
+
+  console.log("req.user.id");
+  console.log(req.user.id);
+  
   try {
     const post = await getCollection('post');
     const page = parseInt(req.body.page) || 1;
@@ -58,6 +62,15 @@ router.post('/viewData', async (req, res, next) => {
           as: 'lokasi'
         }
       },
+
+      {
+        $lookup: {
+          from: 'post_keterangan',
+          localField: 'id',         // field di koleksi post
+          foreignField: 'post_id',  // field di koleksi post_keterangan
+          as: 'post_keterangan'
+        }
+      },        
 
         {
     $lookup: {
@@ -172,6 +185,32 @@ async function simpanLokasi(data, idnya) {
     throw error;
   }
 }
+async function simpanupdateKeterangan(data, idnya, req) {
+  try {
+
+    console.log("simpanLokasi");
+    console.log(data);
+  
+    var payload = {
+      _id         : new ObjectId(), // MongoDB ObjectId
+      id          : uniqid(),  
+      post_id     : idnya,            
+      keterangan  : data.keterangan,    
+      status      : data.status,
+      created_at  : new Date(),
+      user_id     : req.user.id
+    }
+
+    const post_keterangan = await getCollection('post_keterangan');
+    await post_keterangan.insertOne(payload);
+    // responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
+
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan simpanLokasi:", error);
+    throw error;
+  }
+}
 
 
 router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
@@ -180,12 +219,11 @@ router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (r
     var data = JSON.parse(req.body.data); 
 
     data.id = uniqid()
-    data.status = 1
-    data.publish = false
-    data.finalisasi = false
-    data.created_at = new Date()
-    // console.log(typeof data);
-    // console.log(data);
+    data.status       = 1
+    data.publish      = false
+    data.finalisasi   = false
+    data.created_at   = new Date()
+    data.user_id      = req.user.id 
 
     try {
         const uploadedFiles = req.files['file']; 
@@ -201,6 +239,10 @@ router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (r
             var simpanLokasix = await simpanLokasi(data, data.id);
             if(simpanLokasix===false){
               console.log('Gagal menyimpan lokasi');
+            }
+            var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req);
+            if(simpanKeterangan===false){
+              console.log('Gagal menyimpan keterangan');
             }
 
             const listMenu = await getCollection('post');
