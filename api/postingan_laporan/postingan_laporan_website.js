@@ -63,6 +63,14 @@ router.post('/viewData', async (req, res, next) => {
           as: 'post_keterangan'
         }
       },      
+      {
+        $lookup: {
+          from: 'post_handle',
+          localField: 'id',         // field di koleksi post
+          foreignField: 'post_id',  // field di koleksi post_handle
+          as: 'post_handle'
+        }
+      },      
 
         {
     $lookup: {
@@ -151,7 +159,9 @@ async function delegasikeopd(data, idnya) {
 
 
     const post_handle = await getCollection('post_handle');
-    await post_handle.insertOne(payload);
+    await post_handle.updateOne({ post_id: idnya }, payload, { upsert: true });
+
+    // await post_handle.insertOne(payload);
     // responQuery(post_handle, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
 
     return true;
@@ -181,13 +191,10 @@ router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]),
  
 });
 
-
-
-
 router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
   // Tambah data opd penerima
   // Delegasi Aduan = 2
-  console.log(req.body);
+    console.log(req.body);
 
     const data = req.body; 
           data.status = 2; // Status 2 = Diterima
@@ -208,19 +215,143 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
     if(delegasikeopdx===false){
       console.log('Gagal delegasikeopd');
     }
-    responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan");   
+    responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");   
   
+})
+
+router.post('/viewDataOPD', async (req, res, next) => { 
+  try {
+    const post = await getCollection('post');
+    const page = parseInt(req.body.page) || 1;
+    const limit = 10;
+    const cari = req.body.cari || '';
+
+    const pipeline = [
+      {
+        $match: {
+          user_id: req.user.id,
+          title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
+        }
+      },
+
+      {
+        $lookup: {
+          from: 'lampiran',
+          let: { postId: '$id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$tabel_id', '$$postId'] },
+                    { $eq: ['$tabel', 'post'] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'lampiran'
+        }
+      }, 
+
+      {
+        $lookup: {
+          from: 'post_lokasi',
+          localField: 'id',      // field di koleksi post
+          foreignField: 'post_id', // field di koleksi post_lokasi
+          as: 'lokasi'
+        }
+      },
+
+      {
+        $lookup: {
+          from: 'post_keterangan',
+          localField: 'id',         // field di koleksi post
+          foreignField: 'post_id',  // field di koleksi post_keterangan
+          as: 'post_keterangan'
+        }
+      },      
+
+        {
+    $lookup: {
+      from: 'users',
+      localField: 'user_id',
+      foreignField: 'id',
+      as: 'createdBy'
+    }
+  },
+
+  {
+    $unwind: {
+      path: '$createdBy',
+      preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
+    }
+  },
+
+  {
+    $addFields: {
+      createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
+    }
+  },
+
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $skip: (page - 1) * limit
+      },
+      {
+        $limit: limit
+      }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+
+    // Hitung total data (tanpa $skip dan $limit)
+    const totalData = await post.countDocuments({
+      title: { $regex: cari, $options: 'i' }
+    });
+
+    res.status(200).json({
+      currentPage: page,
+      totalPage: Math.ceil(totalData / limit),
+      totalData,
+      data: results
+    });
+  } catch (error) {
+    console.error('Gagal mengambil data post:', error);
+    res.status(500).json({ message: 'Gagal mengambil data' });
+  }
 })
 
 
 router.post('/tolakAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
- 
+    const data = req.body; 
+          data.status = 3; // Status 3 = Ditolak
+    const post = await getCollection('post');
+    const result = await post.updateOne({ id :data.id }, 
+        { $set: { 
+                  status : data.status, // Status 3 = Ditolak              
+                }
+        }) 
+    var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+    if(simpanKeterangan===false){
+      console.log('Gagal menyimpan keterangan');
+    }
+    responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan");  
 });
 
 router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
   // Tambah data opd penerima
   // Delegasi Aduan = 2
 })
+
+router.post('/chatBox', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+  // Tambah data opd penerima
+  // Delegasi Aduan = 2
+})
+
+
 
 
 
