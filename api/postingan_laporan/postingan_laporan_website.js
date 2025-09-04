@@ -167,6 +167,57 @@ router.post('/viewData', async (req, res, next) => {
     }
   },
 
+  // Join master_kategori_laporan → langsung ambil uraian
+  {
+    $lookup: {
+      from: "master_kategori_laporan",
+      let: { mkid: "$master_kategori_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
+        { $project: { _id: 0, uraian: 1 } }
+      ],
+      as: "master_kategori_uraian"
+    }
+  },
+  {
+    $set: {
+      master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
+    }
+  },
+
+  // Join master_kategori_laporan_sub → langsung ambil uraian
+  {
+    $lookup: {
+      from: "master_kategori_laporan_sub",
+      let: { skid: "$master_sub_kategori_id" },
+      pipeline: [
+        { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
+        { $project: { _id: 0, uraian: 1 } }
+      ],
+      as: "master_sub_kategori_uraian"
+    }
+  },
+  {
+    $set: {
+      master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
+    }
+  },  
+
+  // Join users → ambil nama
+  {
+    $lookup: {
+      from: "users",
+      localField: "user_id",
+      foreignField: "id",
+      as: "createdBy"
+    }
+  },
+  {
+    $set: {
+      createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+    }
+  },  
+
   // Join lampiran (langsung filter di pipeline)
   {
     $lookup: {
@@ -239,63 +290,12 @@ router.post('/viewData', async (req, res, next) => {
       as: "post_handle"
     }
   },
-
-  // Join master_kategori_laporan → langsung ambil uraian
-  {
-    $lookup: {
-      from: "master_kategori_laporan",
-      let: { mkid: "$master_kategori_id" },
-      pipeline: [
-        { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
-        { $project: { _id: 0, uraian: 1 } }
-      ],
-      as: "master_kategori_uraian"
-    }
-  },
-  {
-    $set: {
-      master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
-    }
-  },
-
-  // Join master_kategori_laporan_sub → langsung ambil uraian
-  {
-    $lookup: {
-      from: "master_kategori_laporan_sub",
-      let: { skid: "$master_sub_kategori_id" },
-      pipeline: [
-        { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
-        { $project: { _id: 0, uraian: 1 } }
-      ],
-      as: "master_sub_kategori_uraian"
-    }
-  },
-  {
-    $set: {
-      master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
-    }
-  },
-
-  // Join users → ambil nama
-  {
-    $lookup: {
-      from: "users",
-      localField: "user_id",
-      foreignField: "id",
-      as: "createdBy"
-    }
-  },
-  {
-    $set: {
-      createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
-    }
-  },
-
-  // Sort + paging
-  { $sort: { created_at: -1 } },
-  { $skip: (page - 1) * limit },
-  { $limit: limit }
-];
+  
+    // Sort + paging
+    { $sort: { created_at: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit }
+    ];
 
     const results = await post.aggregate(pipeline).toArray();
 
@@ -323,7 +323,7 @@ async function simpanupdateKeterangan(data, idnya, req) {
     const post = await getCollection('post_keterangan');
     await post.updateOne({ post_id :idnya }, 
         { $set: { 
-                    status         : data.status, // Status 3 = Ditolak              
+                    status         : data.status, // Status 3 = Ditolak / 6 = kembalikan ke admin daerah
                     keterangan     : data.keterangan,
                     user_id        : req.user.id
                 }
@@ -343,7 +343,7 @@ async function delegasikeopd(data, idnya) {
     
 
     var payload = {
-      _id: new ObjectId(), // MongoDB ObjectId
+      // _id: new ObjectId(), // MongoDB ObjectId
       id: uniqid(), // Custom ID
       post_id: idnya,           // ID dari laporan
       master_unit_kerja_id: data.unit_kerja_id,   // Latitude
@@ -352,7 +352,7 @@ async function delegasikeopd(data, idnya) {
 
 
     const post_handle = await getCollection('post_handle');
-    await post_handle.updateOne({ post_id: idnya }, { $set:{...payload} }, { upsert: true });
+    await post_handle.updateOne({ post_id: idnya }, { $set:payload, $setOnInsert: { _id:new ObjectId() } }, { upsert: true });
 
     // await post_handle.insertOne(payload);
     // responQuery(post_handle, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
@@ -415,89 +415,158 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
 router.post('/viewDataOPD', async (req, res, next) => { 
 
   // var opds = getOPD({unit_kerja_id:"EtTbFb6EzYZt9mMJL"});
-  try {
+try {
     const post = await getCollection('post');
     const page = parseInt(req.body.page) || 1;
     const limit = 10;
     const cari = req.body.cari || '';
+    const unit_kerja_id = req.user.auth.master_unit_kerja_id; //Get ID Master Unit Kerja
+
+    // console.log(req.user.auth.master_unit_kerja_id);
+    
+
 
     const pipeline = [
+      // Filter judul
       {
         $match: {
-          user_id: req.user.id,
-          title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
+          title: { $regex: cari, $options: "i" }
         }
       },
 
+      // Join master_kategori_laporan → langsung ambil uraian
       {
         $lookup: {
-          from: 'lampiran',
-          let: { postId: '$id' },
+          from: "master_kategori_laporan",
+          let: { mkid: "$master_kategori_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
+            { $project: { _id: 0, uraian: 1 } }
+          ],
+          as: "master_kategori_uraian"
+        }
+      },
+      {
+        $set: {
+          master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
+        }
+      },
+
+      // Join master_kategori_laporan_sub → langsung ambil uraian
+      {
+        $lookup: {
+          from: "master_kategori_laporan_sub",
+          let: { skid: "$master_sub_kategori_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
+            { $project: { _id: 0, uraian: 1 } }
+          ],
+          as: "master_sub_kategori_uraian"
+        }
+      },
+      {
+        $set: {
+          master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
+        }
+      },  
+
+      // Join users → ambil nama
+      {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "id",
+          as: "createdBy"
+        }
+      },
+      {
+        $set: {
+          createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+        }
+      },  
+
+      // Join lampiran (langsung filter di pipeline)
+      {
+        $lookup: {
+          from: "lampiran",
+          let: { postId: "$id" },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$tabel_id', '$$postId'] },
-                    { $eq: ['$tabel', 'post'] }
+                    { $eq: ["$tabel_id", "$$postId"] },
+                    { $eq: ["$tabel", "post"] }
                   ]
                 }
               }
+            },
+            { $project: { _id: 0, file: 1, filetype: 1, filethumbnail: 1 } }
+          ],
+          as: "lampiran"
+        }
+      },
+
+      // Join lokasi
+      {
+        $lookup: {
+          from: "post_lokasi",
+          localField: "id",
+          foreignField: "post_id",
+          as: "lokasi"
+        }
+      },
+
+      // Join post_keterangan
+      {
+        $lookup: {
+          from: "post_keterangan",
+          localField: "id",
+          foreignField: "post_id",
+          as: "post_keterangan"
+        }
+      },
+
+      // Join post_handle + unit_kerja langsung
+      {
+        $lookup: {
+          from: "post_handle",
+          let: { pid: "$id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
+            {
+              $lookup: {
+                from: "unit_kerja",
+                localField: "master_unit_kerja_id",
+                foreignField: "id",
+                as: "unit_kerja"
+              }
+            },
+            { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                master_unit_kerja_id: 1,
+                status: 1,
+                "unit_kerja.id": 1,
+                "unit_kerja.unit_kerja": 1
+              }
             }
           ],
-          as: 'lampiran'
-        }
-      }, 
-
-      {
-        $lookup: {
-          from: 'post_lokasi',
-          localField: 'id',      // field di koleksi post
-          foreignField: 'post_id', // field di koleksi post_lokasi
-          as: 'lokasi'
+          as: "post_handle"
         }
       },
-
       {
-        $lookup: {
-          from: 'post_keterangan',
-          localField: 'id',         // field di koleksi post
-          foreignField: 'post_id',  // field di koleksi post_keterangan
-          as: 'post_keterangan'
+      $match: {
+        "post_handle.master_unit_kerja_id": unit_kerja_id
         }
-      },      
-
-        {
-    $lookup: {
-      from: 'users',
-      localField: 'user_id',
-      foreignField: 'id',
-      as: 'createdBy'
-    }
-  },
-
-  {
-    $unwind: {
-      path: '$createdBy',
-      preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
-    }
-  },
-
-  {
-    $addFields: {
-      createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
-    }
-  },
-
-      {
-        $sort: { createdAt: -1 }
       },
-      {
-        $skip: (page - 1) * limit
-      },
-      {
-        $limit: limit
-      }
+      
+      // Sort + paging
+      { $sort: { created_at: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit }
     ];
 
     const results = await post.aggregate(pipeline).toArray();
@@ -511,7 +580,8 @@ router.post('/viewDataOPD', async (req, res, next) => {
       currentPage: page,
       totalPage: Math.ceil(totalData / limit),
       totalData,
-      data: results
+      data: results,
+       
     });
   } catch (error) {
     console.error('Gagal mengambil data post:', error);
@@ -522,18 +592,19 @@ router.post('/viewDataOPD', async (req, res, next) => {
 
 router.post('/tolakAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
     const data = req.body; 
-          data.status = 3; // Status 3 = Ditolak
+          data.status = 6; // Status 3 = Ditolak
     const post = await getCollection('post');
     const result = await post.updateOne({ id :data.id }, 
         { $set: { 
-                  status : data.status, // Status 3 = Ditolak              
+                    status         : data.status, // Status 3 = Ditolak              
                 }
         }) 
+
     var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
     if(simpanKeterangan===false){
       console.log('Gagal menyimpan keterangan');
     }
-    responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan");  
+    responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan"); 
 });
 
 router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
@@ -541,9 +612,58 @@ router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), a
   // Delegasi Aduan = 2
 })
 
-router.post('/chatBox', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  // Tambah data opd penerima
-  // Delegasi Aduan = 2
+router.post('/chat_view', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+
+    try {
+    const post = await getCollection('chat');
+    const page = parseInt(req.body.page) || 1;
+    const limit = 10;
+    const cari = req.body.cari || '';
+    
+    const pipeline = [
+    // Filter judul
+    {
+      $match: {
+        pesan: { $regex: cari, $options: "i" }
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "created_by",
+        foreignField: "id",
+        as: "createdBy"
+      }
+    },
+    {
+      $set: {
+        createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+      }
+    },
+
+    // Sort + paging
+    { $sort: { created_at: -1 } }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+    
+    res.status(200).json({ 
+      data: results, 
+    });
+  } catch (error) {
+    console.error('Gagal mengambil data post:', error);
+    res.status(500).json({ message: 'Gagal mengambil data' });
+  } 
+})
+
+router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+    var data = JSON.parse(req.body.data); 
+    data.id = uniqid()
+    data.created_by   = req.user.id
+    data.created_at   = new Date() 
+    const chat = await getCollection('chat');
+    const result = await chat.insertOne(data);
+    responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");   
 })
 
 

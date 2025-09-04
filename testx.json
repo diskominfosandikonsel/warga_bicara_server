@@ -1,9 +1,4 @@
 {
-   "currentPage": 1,
-   "totalPage": 1,
-   "totalData": 8,
-   "data": [
-      {
          "_id": "689b5ad82e11d676eb67cf35",
          "id": "eaztawgme8opntv",
          "title": "Judul Laporan asdxasdx asdxasdx",
@@ -19,46 +14,26 @@
          "created_at": "2025-08-12T15:16:40.290Z",
          "lampiran": [
             {
-               "_id": "689b5ad82e11d676eb67cf2e",
-               "id": "eaztawgme8opnue",
-               "tabel": "post",
-               "tabel_id": "eaztawgme8opntv",
                "file": "1755011800256.png",
                "filetype": "image/png",
                "filethumbnail": "thumbnail1755011800256.png"
             },
             {
-               "_id": "689b5ad82e11d676eb67cf2f",
-               "id": "eaztawgme8opnwy",
-               "tabel": "post",
-               "tabel_id": "eaztawgme8opntv",
                "file": "1755011800259.png",
                "filetype": "image/png",
                "filethumbnail": "thumbnail1755011800259.png"
             },
             {
-               "_id": "689b5ad82e11d676eb67cf30",
-               "id": "eaztawgme8opnz8",
-               "tabel": "post",
-               "tabel_id": "eaztawgme8opntv",
                "file": "1755011800261.png",
                "filetype": "image/png",
                "filethumbnail": "thumbnail1755011800261.png"
             },
             {
-               "_id": "689b5ad82e11d676eb67cf31",
-               "id": "eaztawgme8opo1g",
-               "tabel": "post",
-               "tabel_id": "eaztawgme8opntv",
                "file": "1755011800284.png",
                "filetype": "image/png",
                "filethumbnail": "thumbnail1755011800284.png"
             },
             {
-               "_id": "689b5ad82e11d676eb67cf32",
-               "id": "eaztawgme8opo3s",
-               "tabel": "post",
-               "tabel_id": "eaztawgme8opntv",
                "file": "1755011800287.png",
                "filetype": "image/png",
                "filethumbnail": "thumbnail1755011800287.png"
@@ -84,12 +59,13 @@
          ],
          "post_handle": [
             {
-               "_id": "68b855ac7c1e795c2a2d661c",
-               "post_id": "eaztawgme8opntv",
                "id": "bza2ylkmf43gjo6",
                "master_unit_kerja_id": "EtTbFb6EzYZt9mMJL",
-               "status": 2
+               "status": 2,
+               "unit_kerja": {
+                  "id": "EtTbFb6EzYZt9mMJL",
+                  "unit_kerja": "DINAS KOMUNIKASI INFORMASI DAN PERSANDIAN"
+               }
             }
          ]
       }
-    ]}

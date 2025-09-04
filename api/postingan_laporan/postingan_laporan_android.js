@@ -341,6 +341,61 @@ router.post('/removeData', async (req, res, next) => {
 })
 
 
+router.post('/chat_view', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+
+    try {
+    const post = await getCollection('chat');
+    const page = parseInt(req.body.page) || 1;
+    const limit = 10;
+    const cari = req.body.cari || '';
+    
+    const pipeline = [
+    // Filter judul
+    {
+      $match: {
+        pesan: { $regex: cari, $options: "i" }
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "created_by",
+        foreignField: "id",
+        as: "createdBy"
+      }
+    },
+    {
+      $set: {
+        createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+      }
+    },
+
+    // Sort + paging
+    { $sort: { created_at: -1 } }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+    
+    res.status(200).json({ 
+      data: results, 
+    });
+  } catch (error) {
+    console.error('Gagal mengambil data post:', error);
+    res.status(500).json({ message: 'Gagal mengambil data' });
+  } 
+})
+
+router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+    var data = JSON.parse(req.body.data); 
+    data.id = uniqid()
+    data.created_by   = req.user.id
+    data.created_at   = new Date() 
+    const chat = await getCollection('chat');
+    const result = await chat.insertOne(data);
+    responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");   
+})
+
+
 const responQuery = async (result, req, res, next, successMessage, errorMessage) => {
     try {
         let action = '';
