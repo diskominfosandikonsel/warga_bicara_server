@@ -20,6 +20,22 @@ router.post('/viewData', async (req, res, next) => {
     const limit = 10;
     const cari = req.body.cari || '';
 
+    const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
+
+    const filter = {};
+    if (cari) {
+      filter.title = { $regex: cari, $options: 'i' };
+    }
+    if (master_kategori_laporan_id) {
+      filter.master_kategori_id = master_kategori_laporan_id;
+    }
+    if (master_kategori_laporan_sub_id) {
+      filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
+    }
+    if (status) {
+      filter.status = parseInt(status);
+    }
+
     const pipelinex1 = [
       {
         $match: {
@@ -162,10 +178,28 @@ router.post('/viewData', async (req, res, next) => {
     const pipeline = [
   // Filter judul
   {
-    $match: {
-      title: { $regex: cari, $options: "i" }
-    }
+    // $match: {
+    //   title: { $regex: cari, $options: "i" }
+    // }
+    $match: filter
   },
+
+  {
+        $lookup: {
+          from: 'master_kategori_laporan',
+          localField: 'master_kategori_id',
+          foreignField: 'id',
+          as: 'kategorix'
+        }
+      },
+      {
+        $lookup: {
+          from: 'master_kategori_laporan_sub',
+          localField: 'master_sub_kategori_id',
+          foreignField: 'id',
+          as: 'sub_kategorix'
+        }
+      },
 
   // Join master_kategori_laporan → langsung ambil uraian
   {
@@ -317,55 +351,6 @@ router.post('/viewData', async (req, res, next) => {
   }
 })
 
-
-async function simpanupdateKeterangan(data, idnya, req) {
-  try { 
-    const post = await getCollection('post_keterangan');
-    await post.updateOne({ post_id :idnya }, 
-        { $set: { 
-                    status         : data.status, // Status 3 = Ditolak / 6 = kembalikan ke admin daerah
-                    keterangan     : data.keterangan,
-                    user_id        : req.user.id
-                }
-        })
-    return true;
-  } catch (error) {
-    console.error("Gagal menyimpan simpanLokasi:", error);
-    throw error;
-  }
-}
-
-async function delegasikeopd(data, idnya) {
-  try {
-
-    console.log("delegasikeopd");
-    console.log(data);
-    
-
-    var payload = {
-      // _id: new ObjectId(), // MongoDB ObjectId
-      id: uniqid(), // Custom ID
-      post_id: idnya,           // ID dari laporan
-      master_unit_kerja_id: data.unit_kerja_id,   // Latitude
-      status: data.status  // Longitude
-    }
-
-
-    const post_handle = await getCollection('post_handle');
-    await post_handle.updateOne({ post_id: idnya }, { $set:payload, $setOnInsert: { _id:new ObjectId() } }, { upsert: true });
-
-    // await post_handle.insertOne(payload);
-    // responQuery(post_handle, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
-
-    return true;
-  } catch (error) {
-    console.error("Gagal menyimpan simpanLokasi:", error);
-    throw error;
-  }
-}
-
-
-
 router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
     const data = req.body; 
           data.status = 3; // Status 3 = Ditolak
@@ -391,11 +376,14 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
 
     const data = req.body; 
           data.status = 2; // Status 2 = Diterima
-          data.keterangan = "";
+          data.created_at   = new Date()
+          // data.keterangan = "";
     const post = await getCollection('post');
     const result = await post.updateOne({ id :data.id }, 
         { $set: { 
-                    status         : data.status // Status 2 = Delegasi              
+                    status : data.status, // Status 2 = Delegasi              
+                    master_kategori_id : data.master_kategori_laporan_id,
+                    master_sub_kategori_id : data.master_kategori_laporan_sub_id,
                 }
         }) 
 
@@ -411,6 +399,8 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
     responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");   
   
 })
+
+
 
 router.post('/viewDataOPD', async (req, res, next) => { 
 
@@ -589,7 +579,6 @@ try {
   }
 })
 
-
 router.post('/tolakAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
     const data = req.body; 
           data.status = 6; // Status 3 = Ditolak
@@ -608,8 +597,19 @@ router.post('/tolakAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), as
 });
 
 router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  // Tambah data opd penerima
-  // Delegasi Aduan = 2
+
+  console.log(req.body);
+  
+  const data = req.body;
+  data.status = 4; // tindak lanjut dengan opd yang bersangkutan
+  const post = await getCollection('post');
+  const result = await post.updateOne({ id :data.id }, 
+        { $set: { 
+                  status : data.status,
+                }
+        })
+
+  responQuery(result, req, res, next, "Data berhasil diterima", "Data gagal diterima"); 
 })
 
 router.post('/chat_view', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
@@ -665,6 +665,135 @@ router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async 
     const result = await chat.insertOne(data);
     responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");   
 })
+
+router.post('/removeData', async (req, res, next) => {
+    const data = req.body;
+    const idx = data.id;
+    console.log("==================");
+    console.log(idx);
+    console.log("==================");
+
+    if (!idx) {
+        return res.status(400).json({ message: "ID data tidak ditemukan" });
+    }
+
+    try {
+        const post = await getCollection('post');
+        const post_lokasi = await getCollection('post_lokasi');
+        const post_handle = await getCollection('post_handle');
+        const post_keterangan = await getCollection('post_keterangan');
+        const lampiran = await getCollection('lampiran');
+
+        // dilakukan pencarian data
+        const findPost = await post.findOne({ id: idx });
+        const findLokasi = await post_lokasi.find({ post_id: idx }).toArray();
+        const findHandle = await post_handle.find({ post_id: idx }).toArray();
+        const findKeterangan = await post_keterangan.find({ post_id: idx }).toArray();
+        const findLampiran = await lampiran.find({ tabel_id: idx, tabel: 'post' }).toArray();
+        
+        console.log("Data 'post' yang akan dihapus:", findPost);
+        console.log("Data 'post_lokasi' yang akan dihapus:", findLokasi);
+        console.log("Data 'post_handle' yang akan dihapus:", findHandle);
+        console.log("Data 'post_keterangan' yang akan dihapus:", findKeterangan);
+        console.log("Data 'lampiran' yang akan dihapus:", findLampiran);
+        console.log(`--------------------------------------------\n`);
+
+        const [
+            resultPost,
+            resultPostLokasi,
+            resultPostHandle,
+            resultPostKeterangan,
+            resultLampiran
+        ] = await Promise.all([
+            post.deleteOne({ id: idx }),
+
+            // menghapus isi tabel yang id nya sama dengan id post
+            post_lokasi.deleteMany({ post_id: idx }),
+            post_handle.deleteMany({ post_id: idx }),
+            post_keterangan.deleteMany({ post_id: idx }),
+
+            // Menghapus lampiran, dengan kondisi tabel_id dan tabel
+            lampiran.deleteMany({ tabel_id: idx, tabel: 'post' })
+        ]);
+
+        // Periksa apakah data 'post' utama berhasil dihapus
+        if (resultPost.deletedCount === 0) {
+            // Jika post utama tidak ditemukan, kembalikan pesan error
+            return res.status(404).json({
+                action: 'remove',
+                message: 'Data post yang ingin dihapus tidak ditemukan'
+            });
+        }
+        
+        // Buat objek hasil gabungan untuk dikirim ke `responQuery`
+        const finalResult = {
+            deletedCount: resultPost.deletedCount,
+            post_lokasi_count: resultPostLokasi.deletedCount,
+            post_handle_count: resultPostHandle.deletedCount,
+            post_keterangan_count: resultPostKeterangan.deletedCount,
+            lampiran_count: resultLampiran.deletedCount
+        };
+        
+        responQuery(finalResult, req, res, next, "Data berhasil dihapus", "Data gagal dihapus");
+
+    } catch (err) {
+        console.error('Error saat menghapus data:', err);
+        return res.status(500).json({
+            message: 'Terjadi kesalahan saat menghapus data.'
+        });
+    }
+});
+
+
+async function simpanupdateKeterangan(data, idnya, req) {
+  try { 
+    const post = await getCollection('post_keterangan');
+    await post.updateOne({ post_id :idnya }, 
+        { $set: { 
+                    status         : data.status, // Status 3 = Ditolak / 6 = kembalikan ke admin daerah
+                    keterangan     : data.keterangan,
+                    created_at      : new Date(),
+                    user_id        : req.user.id
+                },
+        },
+        { upsert: true } // Untuk memasukkan data ke dalam tabel post_keterangan
+      )
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan simpanLokasi:", error);
+    throw error;
+  }
+}
+
+async function delegasikeopd(data, idnya) {
+  try {
+
+    console.log("delegasikeopd");
+    console.log(data);
+    
+
+    var payload = {
+      // _id: new ObjectId(), // MongoDB ObjectId
+      id: uniqid(), // Custom ID
+      post_id: idnya,           // ID dari laporan
+      master_unit_kerja_id: data.unit_kerja_id,   // Latitude
+      status: data.status  // Longitude
+    }
+
+
+    const post_handle = await getCollection('post_handle');
+    await post_handle.updateOne({ post_id: idnya }, { $set:payload, $setOnInsert: { _id:new ObjectId() } }, { upsert: true });
+
+    // await post_handle.insertOne(payload);
+    // responQuery(post_handle, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
+
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan simpanLokasi:", error);
+    throw error;
+  }
+}
+
 
 
 function getOPD(paramsx) {
