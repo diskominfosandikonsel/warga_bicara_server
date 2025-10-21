@@ -14,8 +14,120 @@ const id = require('volleyball/lib/id');
 
 
 
-router.post('/viewData', async (req, res, next) => { 
+// router.post('/viewData', async (req, res, next) => { 
 
+//   console.log("req.user.id");
+//   console.log(req.user.id);
+  
+//   try {
+//     const post = await getCollection('post');
+//     const page = parseInt(req.body.page) || 1;
+//     const limit = 10;
+//     const cari = req.body.cari || '';
+    
+
+//     const pipeline = [
+//       {
+//         $match: {
+//           user_id: req.user.id,
+//           title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
+//         }
+//       },
+
+//       {
+//         $lookup: {
+//           from: 'lampiran',
+//           let: { postId: '$id' },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $and: [
+//                     { $eq: ['$tabel_id', '$$postId'] },
+//                     { $eq: ['$tabel', 'post'] }
+//                   ]
+//                 }
+//               }
+//             }
+//           ],
+//           as: 'lampiran'
+//         }
+//       }, 
+
+//       {
+//         $lookup: {
+//           from: 'post_lokasi',
+//           localField: 'id',      // field di koleksi post
+//           foreignField: 'post_id', // field di koleksi post_lokasi
+//           as: 'lokasi'
+//         }
+//       },
+
+//       {
+//         $lookup: {
+//           from: 'post_keterangan',
+//           localField: 'id',         // field di koleksi post
+//           foreignField: 'post_id',  // field di koleksi post_keterangan
+//           as: 'post_keterangan'
+//         }
+//       },        
+
+//         {
+//     $lookup: {
+//       from: 'users',
+//       localField: 'user_id',
+//       foreignField: 'id',
+//       as: 'createdBy'
+//     }
+//   },
+
+//   {
+//     $unwind: {
+//       path: '$createdBy',
+//       preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
+//     }
+//   },
+
+//   {
+//     $addFields: {
+//       createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
+//     }
+//   },
+
+//       {
+//         $sort: { createdAt: -1 }
+//       },
+//       {
+//         $skip: (page - 1) * limit
+//       },
+//       {
+//         $limit: limit
+//       }
+//     ];
+
+//     const results = await post.aggregate(pipeline).toArray();
+
+//     console.log(results);
+    
+
+//     // Hitung total data (tanpa $skip dan $limit)
+//     const totalData = await post.countDocuments({
+//       title: { $regex: cari, $options: 'i' }
+//     });
+
+//     res.status(200).json({
+//       currentPage: page,
+//       totalPage: Math.ceil(totalData / limit),
+//       totalData,
+//       data: results
+//     });
+//   } catch (error) {
+//     console.error('Gagal mengambil data post:', error);
+//     res.status(500).json({ message: 'Gagal mengambil data' });
+//   }
+// })
+
+router.post('/viewData', async (req, res, next) => { 
   console.log("req.user.id");
   console.log(req.user.id);
   
@@ -25,12 +137,11 @@ router.post('/viewData', async (req, res, next) => {
     const limit = 10;
     const cari = req.body.cari || '';
     
-
     const pipeline = [
       {
         $match: {
           user_id: req.user.id,
-          title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
+          title: { $regex: cari, $options: 'i' }
         }
       },
 
@@ -57,42 +168,71 @@ router.post('/viewData', async (req, res, next) => {
       {
         $lookup: {
           from: 'post_lokasi',
-          localField: 'id',      // field di koleksi post
-          foreignField: 'post_id', // field di koleksi post_lokasi
+          localField: 'id',
+          foreignField: 'post_id',
           as: 'lokasi'
         }
       },
 
+      // Update lookup post_keterangan dengan join ke users untuk info admin
       {
         $lookup: {
           from: 'post_keterangan',
-          localField: 'id',         // field di koleksi post
-          foreignField: 'post_id',  // field di koleksi post_keterangan
+          let: { postId: '$id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$post_id', '$$postId'] }
+              }
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user_id',
+                foreignField: 'id',
+                as: 'admin_info'
+              }
+            },
+            {
+              $unwind: {
+                path: '$admin_info',
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            {
+              $addFields: {
+                admin_name: '$admin_info.nama'
+              }
+            },
+            {
+              $sort: { created_at: -1 }
+            }
+          ],
           as: 'post_keterangan'
         }
       },        
 
-        {
-    $lookup: {
-      from: 'users',
-      localField: 'user_id',
-      foreignField: 'id',
-      as: 'createdBy'
-    }
-  },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'createdBy'
+        }
+      },
 
-  {
-    $unwind: {
-      path: '$createdBy',
-      preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
-    }
-  },
+      {
+        $unwind: {
+          path: '$createdBy',
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
-  {
-    $addFields: {
-      createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
-    }
-  },
+      {
+        $addFields: {
+          createdBy: '$createdBy.nama'
+        }
+      },
 
       {
         $sort: { createdAt: -1 }
@@ -109,9 +249,9 @@ router.post('/viewData', async (req, res, next) => {
 
     console.log(results);
     
-
     // Hitung total data (tanpa $skip dan $limit)
     const totalData = await post.countDocuments({
+      user_id: req.user.id,
       title: { $regex: cari, $options: 'i' }
     });
 
@@ -458,6 +598,141 @@ const responQuery = async (result, req, res, next, successMessage, errorMessage)
     }
 
 };
+
+
+router.post('/get_rejection_reason', async (req, res, next) => {
+  try {
+    const { post_id } = req.body;
+    
+    if (!post_id) {
+      return res.status(400).json({ 
+        message: 'post_id wajib dikirim' 
+      });
+    }
+
+    const post_keterangan = await getCollection('post_keterangan');
+    
+    // Cari keterangan dengan status 3 (ditolak) untuk post_id tertentu
+    // Urutkan berdasarkan created_at terbaru
+    const pipeline = [
+      {
+        $match: {
+          post_id: post_id,
+          status: 3
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'admin_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$admin_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          admin_name: '$admin_info.nama'
+        }
+      },
+      {
+        $sort: { created_at: -1 }
+      },
+      {
+        $limit: 1  // Ambil yang terbaru saja
+      }
+    ];
+
+    const result = await post_keterangan.aggregate(pipeline).toArray();
+    
+    if (result.length > 0) {
+      res.status(200).json({
+        success: true,
+        data: result[0],
+        keterangan: result[0].keterangan,
+        admin_name: result[0].admin_name || 'Admin',
+        created_at: result[0].created_at
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Keterangan penolakan tidak ditemukan'
+      });
+    }
+
+  } catch (error) {
+    console.error('Gagal mengambil keterangan penolakan:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Gagal mengambil keterangan penolakan' 
+    });
+  }
+});
+
+// Alternatif: Endpoint untuk mendapatkan semua keterangan suatu post
+router.post('/get_post_keterangan_history', async (req, res, next) => {
+  try {
+    const { post_id } = req.body;
+    
+    if (!post_id) {
+      return res.status(400).json({ 
+        message: 'post_id wajib dikirim' 
+      });
+    }
+
+    const post_keterangan = await getCollection('post_keterangan');
+    
+    const pipeline = [
+      {
+        $match: {
+          post_id: post_id
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'admin_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$admin_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          admin_name: '$admin_info.nama'
+        }
+      },
+      {
+        $sort: { created_at: -1 }
+      }
+    ];
+
+    const results = await post_keterangan.aggregate(pipeline).toArray();
+    
+    res.status(200).json({
+      success: true,
+      data: results,
+      total: results.length
+    });
+
+  } catch (error) {
+    console.error('Gagal mengambil history keterangan:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Gagal mengambil history keterangan' 
+    });
+  }
+});
 
 
 module.exports = router
