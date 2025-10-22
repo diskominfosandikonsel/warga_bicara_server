@@ -366,6 +366,12 @@ router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]),
   if (simpanKeterangan === false) {
     console.log('Gagal menyimpan keterangan');
   }
+
+  const notificationData = await sendNotification(data.id, 1, 'Laporan Dikembalikan ', 'Laporan anda dikembalikan', data.keterangan, data, false)
+  if (notificationData===false) {
+      console.log('gagal mengirim notificationData');
+  }  
+
   responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan");
 
 });
@@ -398,6 +404,12 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
   if (delegasikeopdx === false) {
     console.log('Gagal delegasikeopd');
   }
+
+  const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
+  if (notificationData===false) {
+    console.log('gagal mengirim notificationData');
+  }  
+
   responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");
 
 })
@@ -616,6 +628,11 @@ router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), a
         status: data.status,
       }
     })
+
+    const notificationData = await sendNotification(data.id, 2, 'Laporan Diterima ', 'Laporan anda sudah di terima oleh opd', 'Laporan sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
+    if (notificationData===false) {
+      console.log('gagal mengirim notificationData');
+    }    
 
   responQuery(result, req, res, next, "Data berhasil diterima", "Data gagal diterima");
 })
@@ -894,6 +911,58 @@ function getOPD(paramsx) {
       return row[0];
     }
   })
+}
+
+router.post('/startChat', async (req, res, next) => {
+
+  try { 
+    const notificationData = await sendNotification('post_id', 'type', 'type_notif', 'title', 'message', 'data', false)
+    if (notificationData===false) {
+      console.log('gagal mengirim notificationData');
+    }
+    console.log('sukses mengirim notificationData');
+    
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+
+  console.log('Do next process here...');
+  res.send({ success: true, message: 'Process completed' });
+  
+  
+});
+
+
+sendNotification = async (post_id, type, type_notif, title, message, data, read) => {
+  
+    const post = await getCollection('post');
+    const findPost = await post.findOne({ id: post_id }) 
+    const hasilcari= findPost 
+    
+
+    try {
+    const datax = {
+                    user_id     : hasilcari.user_id,
+                    type        : type,
+                    type_notif  : type_notif,
+                    title       : title,
+                    message     : message,
+                    read        : read,
+                    data        : data,
+                    created_at  : new Date()
+                  } 
+      const notifikasi  = await getCollection('notifikasi');
+      const result      = await notifikasi.insertOne(datax);                  
+      console.log('sendNotification data ==> ');
+      console.log(data);
+
+      if(result.acknowledged===true)
+        console.log('sendNotification berhasil'); 
+        return true
+    } catch (error) {
+        console.log('sendNotification error:', error);
+        return false; 
+    } 
 }
 
 
