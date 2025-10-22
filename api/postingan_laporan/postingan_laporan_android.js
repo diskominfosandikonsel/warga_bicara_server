@@ -535,6 +535,55 @@ router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async 
     responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");   
 })
 
+router.post('/chat_delete', async (req, res, next) => {
+  const data = req.body;
+  const idx = data.id;
+  console.log("==================");
+  console.log(idx);
+  console.log("==================");
+
+  if (!idx) {
+    return res.status(400).json({ message: "ID data tidak ditemukan" });
+  }
+
+  try {
+    const chat = await getCollection('chat'); 
+
+    // dilakukan pencarian data
+    const findChat = await chat.findOne({ id: idx }); 
+
+    console.log("Data 'chat' yang akan dihapus:", findChat); 
+    console.log(`--------------------------------------------\n`);
+
+    const [
+      resultChat
+    ] = await Promise.all([
+      chat.deleteOne({ id: idx })
+    ]);
+    
+    if (resultChat.deletedCount === 0) {
+      // Jika post utama tidak ditemukan, kembalikan pesan error
+      return res.status(404).json({
+        action: 'remove',
+        message: 'Data post yang ingin dihapus tidak ditemukan'
+      });
+    }
+
+    // Buat objek hasil gabungan untuk dikirim ke `responQuery`
+    const finalResult = {
+      deletedCount: resultChat.deletedCount
+    };
+
+    responQuery(finalResult, req, res, next, "Data berhasil dihapus", "Data gagal dihapus");
+
+  } catch (err) {
+    console.error('Error saat menghapus data:', err);
+    return res.status(500).json({
+      message: 'Terjadi kesalahan saat menghapus data.'
+    });
+  }
+});
+
 
 const responQuery = async (result, req, res, next, successMessage, errorMessage) => {
     try {
