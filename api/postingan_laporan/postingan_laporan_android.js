@@ -763,7 +763,7 @@ router.post('/rating_laporan', async (req, res, next) => {
 
   const data = req.body;
   data.status = 6; // Status 6 = Rating
-  data.createdBy = req.user.id
+  data.created_by = req.user.id
   data.created_at = new Date()
   // data.keterangan = "";
   const post = await getCollection('post');

@@ -1,12 +1,12 @@
 const express = require('express')
 const router = express.Router()
-const { getCollection } = require('../../../db/mongodb/controller')
+const { getCollection } = require('../../db/mongodb/controller')
 const uniqid = require('uniqid')
 
-var upload = require('../../../library/multer/fileMulter');
-const IMAGE = require('../../../library/multer/image');
+var upload = require('../../library/multer/fileMulter');
+const IMAGE = require('../../library/multer/image');
 const { ObjectId } = require('mongodb');
-const dbegov = require('../../../db/mysql/simpeg')
+const dbegov = require('../../db/mysql/simpeg')
 
 
 
@@ -14,341 +14,342 @@ const dbegov = require('../../../db/mysql/simpeg')
 
 router.post('/viewData', async (req, res, next) => {
 
-  try {
-    const post = await getCollection('post');
-    const page = parseInt(req.body.page) || 1;
-    const limit = 10;
-    const cari = req.body.cari || '';
+  // try {
+  //   const post = await getCollection('post');
+  //   const page = parseInt(req.body.page) || 1;
+  //   const limit = 10;
+  //   const cari = req.body.cari || '';
 
-    const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
+  //   const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
 
-    const filter = {};
-    if (cari) {
-      filter.title = { $regex: cari, $options: 'i' };
-    }
-    if (master_kategori_laporan_id) {
-      filter.master_kategori_id = master_kategori_laporan_id;
-    }
-    if (master_kategori_laporan_sub_id) {
-      filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
-    }
-    if (status) {
-      filter.status = parseInt(status);
-    }
+  //   const filter = {};
+  //   if (cari) {
+  //     filter.title = { $regex: cari, $options: 'i' };
+  //   }
+  //   if (master_kategori_laporan_id) {
+  //     filter.master_kategori_id = master_kategori_laporan_id;
+  //   }
+  //   if (master_kategori_laporan_sub_id) {
+  //     filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
+  //   }
+  //   if (status) {
+  //     filter.status = parseInt(status);
+  //   }
 
-    const pipelinex1 = [
-      {
-        $match: {
-          title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
-        }
-      },
+  //   const pipelinex1 = [
+  //     {
+  //       $match: {
+  //         title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
+  //       }
+  //     },
 
-      {
-        $lookup: {
-          from: 'lampiran',
-          let: { postId: '$id' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$tabel_id', '$$postId'] },
-                    { $eq: ['$tabel', 'post'] }
-                  ]
-                }
-              }
-            }
-          ],
-          as: 'lampiran'
-        }
-      },
+  //     {
+  //       $lookup: {
+  //         from: 'lampiran',
+  //         let: { postId: '$id' },
+  //         pipeline: [
+  //           {
+  //             $match: {
+  //               $expr: {
+  //                 $and: [
+  //                   { $eq: ['$tabel_id', '$$postId'] },
+  //                   { $eq: ['$tabel', 'post'] }
+  //                 ]
+  //               }
+  //             }
+  //           }
+  //         ],
+  //         as: 'lampiran'
+  //       }
+  //     },
 
-      {
-        $lookup: {
-          from: 'post_lokasi',
-          localField: 'id',      // field di koleksi post
-          foreignField: 'post_id', // field di koleksi post_lokasi
-          as: 'lokasi'
-        }
-      },
+  //     {
+  //       $lookup: {
+  //         from: 'post_lokasi',
+  //         localField: 'id',      // field di koleksi post
+  //         foreignField: 'post_id', // field di koleksi post_lokasi
+  //         as: 'lokasi'
+  //       }
+  //     },
 
-      {
-        $lookup: {
-          from: 'post_keterangan',
-          localField: 'id',         // field di koleksi post
-          foreignField: 'post_id',  // field di koleksi post_keterangan
-          as: 'post_keterangan'
-        }
-      },
-      {
-        $lookup: {
-          from: 'post_handle',
-          localField: 'id',         // field di koleksi post
-          foreignField: 'post_id',  // field di koleksi post_handle
-          as: 'post_handle'
-        }
-      },
-      {
-        $lookup: {
-          from: 'unit_kerja',
-          localField: 'post_handle.master_unit_kerja_id',         // field di koleksi post
-          foreignField: 'id',                       // field di koleksi unit_kerja
-          as: 'unit_kerja'
-        }
-      },
+  //     {
+  //       $lookup: {
+  //         from: 'post_keterangan',
+  //         localField: 'id',         // field di koleksi post
+  //         foreignField: 'post_id',  // field di koleksi post_keterangan
+  //         as: 'post_keterangan'
+  //       }
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: 'post_handle',
+  //         localField: 'id',         // field di koleksi post
+  //         foreignField: 'post_id',  // field di koleksi post_handle
+  //         as: 'post_handle'
+  //       }
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: 'unit_kerja',
+  //         localField: 'post_handle.master_unit_kerja_id',         // field di koleksi post
+  //         foreignField: 'id',                       // field di koleksi unit_kerja
+  //         as: 'unit_kerja'
+  //       }
+  //     },
 
-      {
-        $lookup: {
-          from: 'master_kategori_laporan',
-          localField: 'master_kategori_id',         // field di koleksi post
-          foreignField: 'id',  // field di koleksi post_keterangan
-          as: 'master_kategori_uraian'
-        }
-      },
-      {
-        $unwind: {
-          path: '$master_kategori_uraian',
-          preserveNullAndEmptyArrays: true // kalau master_kategori_laporan_uraian tidak ditemukan, tetap lanjut
-        }
-      },
+  //     {
+  //       $lookup: {
+  //         from: 'master_kategori_laporan',
+  //         localField: 'master_kategori_id',         // field di koleksi post
+  //         foreignField: 'id',  // field di koleksi post_keterangan
+  //         as: 'master_kategori_uraian'
+  //       }
+  //     },
+  //     {
+  //       $unwind: {
+  //         path: '$master_kategori_uraian',
+  //         preserveNullAndEmptyArrays: true // kalau master_kategori_laporan_uraian tidak ditemukan, tetap lanjut
+  //       }
+  //     },
 
-      {
-        $addFields: {
-          master_kategori_uraian: '$master_kategori_uraian.uraian' // ganti array user jadi nama string saja
-        }
-      },
-
-
-      {
-        $lookup: {
-          from: 'master_kategori_laporan_sub',
-          localField: 'master_sub_kategori_id',         // field di koleksi post
-          foreignField: 'id',  // field di koleksi post_keterangan
-          as: 'master_sub_kategori_uraian'
-        }
-      },
-      {
-        $unwind: {
-          path: '$master_sub_kategori_uraian',
-          preserveNullAndEmptyArrays: true // kalau master_kategori_laporan_uraian tidak ditemukan, tetap lanjut
-        }
-      },
-
-      {
-        $addFields: {
-          master_sub_kategori_uraian: '$master_sub_kategori_uraian.uraian' // ganti array user jadi nama string saja
-        }
-      },
+  //     {
+  //       $addFields: {
+  //         master_kategori_uraian: '$master_kategori_uraian.uraian' // ganti array user jadi nama string saja
+  //       }
+  //     },
 
 
+  //     {
+  //       $lookup: {
+  //         from: 'master_kategori_laporan_sub',
+  //         localField: 'master_sub_kategori_id',         // field di koleksi post
+  //         foreignField: 'id',  // field di koleksi post_keterangan
+  //         as: 'master_sub_kategori_uraian'
+  //       }
+  //     },
+  //     {
+  //       $unwind: {
+  //         path: '$master_sub_kategori_uraian',
+  //         preserveNullAndEmptyArrays: true // kalau master_kategori_laporan_uraian tidak ditemukan, tetap lanjut
+  //       }
+  //     },
 
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user_id',
-          foreignField: 'id',
-          as: 'createdBy'
-        }
-      },
+  //     {
+  //       $addFields: {
+  //         master_sub_kategori_uraian: '$master_sub_kategori_uraian.uraian' // ganti array user jadi nama string saja
+  //       }
+  //     },
 
-      {
-        $unwind: {
-          path: '$createdBy',
-          preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
-        }
-      },
 
-      {
-        $addFields: {
-          createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
-        }
-      },
 
-      {
-        $sort: { createdAt: -1 }
-      },
-      {
-        $skip: (page - 1) * limit
-      },
-      {
-        $limit: limit
-      }
-    ];
+  //     {
+  //       $lookup: {
+  //         from: 'users',
+  //         localField: 'user_id',
+  //         foreignField: 'id',
+  //         as: 'createdBy'
+  //       }
+  //     },
 
-    const pipeline = [
-      // Filter judul
-      {
-        // $match: {
-        //   title: { $regex: cari, $options: "i" }
-        // }
-        $match: filter
-      },
+  //     {
+  //       $unwind: {
+  //         path: '$createdBy',
+  //         preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
+  //       }
+  //     },
 
-      {
-        $lookup: {
-          from: 'master_kategori_laporan',
-          localField: 'master_kategori_id',
-          foreignField: 'id',
-          as: 'kategorix'
-        }
-      },
-      {
-        $lookup: {
-          from: 'master_kategori_laporan_sub',
-          localField: 'master_sub_kategori_id',
-          foreignField: 'id',
-          as: 'sub_kategorix'
-        }
-      },
+  //     {
+  //       $addFields: {
+  //         createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
+  //       }
+  //     },
 
-      // Join master_kategori_laporan → langsung ambil uraian
-      {
-        $lookup: {
-          from: "master_kategori_laporan",
-          let: { mkid: "$master_kategori_id" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
-            { $project: { _id: 0, uraian: 1 } }
-          ],
-          as: "master_kategori_uraian"
-        }
-      },
-      {
-        $set: {
-          master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
-        }
-      },
+  //     {
+  //       $sort: { createdAt: -1 }
+  //     },
+  //     {
+  //       $skip: (page - 1) * limit
+  //     },
+  //     {
+  //       $limit: limit
+  //     }
+  //   ];
 
-      // Join master_kategori_laporan_sub → langsung ambil uraian
-      {
-        $lookup: {
-          from: "master_kategori_laporan_sub",
-          let: { skid: "$master_sub_kategori_id" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
-            { $project: { _id: 0, uraian: 1 } }
-          ],
-          as: "master_sub_kategori_uraian"
-        }
-      },
-      {
-        $set: {
-          master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
-        }
-      },
+  //   const pipeline = [
+  //     // Filter judul
+  //     {
+  //       // $match: {
+  //       //   title: { $regex: cari, $options: "i" }
+  //       // }
+  //       $match: filter
+  //     },
 
-      // Join users → ambil nama
-      {
-        $lookup: {
-          from: "users",
-          localField: "user_id",
-          foreignField: "id",
-          as: "createdBy"
-        }
-      },
-      {
-        $set: {
-          createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
-        }
-      },
+  //     {
+  //       $lookup: {
+  //         from: 'master_kategori_laporan',
+  //         localField: 'master_kategori_id',
+  //         foreignField: 'id',
+  //         as: 'kategorix'
+  //       }
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: 'master_kategori_laporan_sub',
+  //         localField: 'master_sub_kategori_id',
+  //         foreignField: 'id',
+  //         as: 'sub_kategorix'
+  //       }
+  //     },
 
-      // Join lampiran (langsung filter di pipeline)
-      {
-        $lookup: {
-          from: "lampiran",
-          let: { postId: "$id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$tabel_id", "$$postId"] },
-                    { $eq: ["$tabel", "post"] }
-                  ]
-                }
-              }
-            },
-            { $project: { _id: 0, file: 1, filetype: 1, filethumbnail: 1 } }
-          ],
-          as: "lampiran"
-        }
-      },
+  //     // Join master_kategori_laporan → langsung ambil uraian
+  //     {
+  //       $lookup: {
+  //         from: "master_kategori_laporan",
+  //         let: { mkid: "$master_kategori_id" },
+  //         pipeline: [
+  //           { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
+  //           { $project: { _id: 0, uraian: 1 } }
+  //         ],
+  //         as: "master_kategori_uraian"
+  //       }
+  //     },
+  //     {
+  //       $set: {
+  //         master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
+  //       }
+  //     },
 
-      // Join lokasi
-      {
-        $lookup: {
-          from: "post_lokasi",
-          localField: "id",
-          foreignField: "post_id",
-          as: "lokasi"
-        }
-      },
+  //     // Join master_kategori_laporan_sub → langsung ambil uraian
+  //     {
+  //       $lookup: {
+  //         from: "master_kategori_laporan_sub",
+  //         let: { skid: "$master_sub_kategori_id" },
+  //         pipeline: [
+  //           { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
+  //           { $project: { _id: 0, uraian: 1 } }
+  //         ],
+  //         as: "master_sub_kategori_uraian"
+  //       }
+  //     },
+  //     {
+  //       $set: {
+  //         master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
+  //       }
+  //     },
 
-      // Join post_keterangan
-      {
-        $lookup: {
-          from: "post_keterangan",
-          localField: "id",
-          foreignField: "post_id",
-          as: "post_keterangan"
-        }
-      },
+  //     // Join users → ambil nama
+  //     {
+  //       $lookup: {
+  //         from: "users",
+  //         localField: "user_id",
+  //         foreignField: "id",
+  //         as: "createdBy"
+  //       }
+  //     },
+  //     {
+  //       $set: {
+  //         createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+  //       }
+  //     },
 
-      // Join post_handle + unit_kerja langsung
-      {
-        $lookup: {
-          from: "post_handle",
-          let: { pid: "$id" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
-            {
-              $lookup: {
-                from: "unit_kerja",
-                localField: "master_unit_kerja_id",
-                foreignField: "id",
-                as: "unit_kerja"
-              }
-            },
-            { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                _id: 0,
-                id: 1,
-                master_unit_kerja_id: 1,
-                status: 1,
-                "unit_kerja.id": 1,
-                "unit_kerja.unit_kerja": 1
-              }
-            }
-          ],
-          as: "post_handle"
-        }
-      },
+  //     // Join lampiran (langsung filter di pipeline)
+  //     {
+  //       $lookup: {
+  //         from: "lampiran",
+  //         let: { postId: "$id" },
+  //         pipeline: [
+  //           {
+  //             $match: {
+  //               $expr: {
+  //                 $and: [
+  //                   { $eq: ["$tabel_id", "$$postId"] },
+  //                   { $eq: ["$tabel", "post"] }
+  //                 ]
+  //               }
+  //             }
+  //           },
+  //           { $project: { _id: 0, file: 1, filetype: 1, filethumbnail: 1 } }
+  //         ],
+  //         as: "lampiran"
+  //       }
+  //     },
 
-      // Sort + paging
-      { $sort: { created_at: -1 } },
-      { $skip: (page - 1) * limit },
-      { $limit: limit }
-    ];
+  //     // Join lokasi
+  //     {
+  //       $lookup: {
+  //         from: "post_lokasi",
+  //         localField: "id",
+  //         foreignField: "post_id",
+  //         as: "lokasi"
+  //       }
+  //     },
 
-    const results = await post.aggregate(pipeline).toArray();
+  //     // Join post_keterangan
+  //     {
+  //       $lookup: {
+  //         from: "post_keterangan",
+  //         localField: "id",
+  //         foreignField: "post_id",
+  //         as: "post_keterangan"
+  //       }
+  //     },
 
-    // Hitung total data (tanpa $skip dan $limit)
-    const totalData = await post.countDocuments({
-      title: { $regex: cari, $options: 'i' }
-    });
+  //     // Join post_handle + unit_kerja langsung
+  //     {
+  //       $lookup: {
+  //         from: "post_handle",
+  //         let: { pid: "$id" },
+  //         pipeline: [
+  //           { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
+  //           {
+  //             $lookup: {
+  //               from: "unit_kerja",
+  //               localField: "master_unit_kerja_id",
+  //               foreignField: "id",
+  //               as: "unit_kerja"
+  //             }
+  //           },
+  //           { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
+  //           {
+  //             $project: {
+  //               _id: 0,
+  //               id: 1,
+  //               master_unit_kerja_id: 1,
+  //               status: 1,
+  //               "unit_kerja.id": 1,
+  //               "unit_kerja.unit_kerja": 1
+  //             }
+  //           }
+  //         ],
+  //         as: "post_handle"
+  //       }
+  //     },
 
-    res.status(200).json({
-      currentPage: page,
-      totalPage: Math.ceil(totalData / limit),
-      totalData,
-      data: results,
+  //     // Sort + paging
+  //     { $sort: { created_at: -1 } },
+  //     { $skip: (page - 1) * limit },
+  //     { $limit: limit }
+  //   ];
 
-    });
-  } catch (error) {
-    console.error('Gagal mengambil data post:', error);
-    res.status(500).json({ message: 'Gagal mengambil data' });
-  }
+  //   const results = await post.aggregate(pipeline).toArray();
+
+  //   // Hitung total data (tanpa $skip dan $limit)
+  //   const totalData = await post.countDocuments({
+  //     title: { $regex: cari, $options: 'i' }
+  //   });
+
+  //   res.status(200).json({
+  //     currentPage: page,
+  //     totalPage: Math.ceil(totalData / limit),
+  //     totalData,
+  //     data: results,
+
+  //   });
+  // } catch (error) {
+  //   console.error('Gagal mengambil data post:', error);
+  //   res.status(500).json({ message: 'Gagal mengambil data' });
+  // }
+
 })
 
 

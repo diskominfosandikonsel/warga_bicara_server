@@ -216,6 +216,12 @@ async function startSecretLoop() {
   const notifikasi_client = require('./api/notifikasi/android/notifikasi')
   app.use('/notifikasi_android', middleware.isLoggedIn, notifikasi_client)
 
+  const rating_client = require('./api/rating/rating_android')
+  app.use('/rating_android', middleware.isLoggedIn, rating_client)
+
+  const dashboard_android_client = require('./api/dashboard/dashboard_android')
+  app.use('/dashboard_android', middleware.isLoggedIn, dashboard_android_client)
+
   const postingan_laporan_website = require('./api/postingan_laporan/postingan_laporan_website')
   app.use('/api/v1/postingan_laporan_website', middleware.isLoggedIn, postingan_laporan_website)
 
