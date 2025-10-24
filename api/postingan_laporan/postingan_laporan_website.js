@@ -6,7 +6,8 @@ const uniqid = require('uniqid')
 var upload = require('../../library/multer/fileMulter');
 const IMAGE = require('../../library/multer/image');
 const { ObjectId } = require('mongodb');
-const dbegov = require('../../db/mysql/simpeg')
+const dbegov = require('../../db/mysql/simpeg');
+const id = require('volleyball/lib/id');
 
 
 
@@ -992,6 +993,8 @@ sendNotification = async (post_id, type, type_notif, title, message, data, read)
 
     try {
     const datax = {
+                    id          : uniqid(),
+                    post_id     : post_id,
                     user_id     : hasilcari.user_id,
                     type        : type,
                     type_notif  : type_notif,

@@ -746,10 +746,10 @@ router.post('/verifikasi_laporan', upload.fields([{ name: 'file', maxCount: 5 }]
     console.log('Gagal menyimpan keterangan');
   }
 
-  const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
-  if (notificationData===false) {
-    console.log('gagal mengirim notificationData');
-  }  
+  // const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
+  // if (notificationData===false) {
+  //   console.log('gagal mengirim notificationData');
+  // }  
 
   responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");
 

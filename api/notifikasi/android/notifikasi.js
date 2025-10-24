@@ -15,7 +15,7 @@ const dbegov = require('../../../db/mysql/simpeg')
 router.post('/viewData', async (req, res, next) => {
 
   try {
-    const post = await getCollection('post');
+    const post = await getCollection('notifikasi');
     const page = parseInt(req.body.page) || 1;
     const limit = 10;
     const cari = req.body.cari || '';
@@ -43,25 +43,25 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
-      {
-        $lookup: {
-          from: 'lampiran',
-          let: { postId: '$id' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$tabel_id', '$$postId'] },
-                    { $eq: ['$tabel', 'post'] }
-                  ]
-                }
-              }
-            }
-          ],
-          as: 'lampiran'
-        }
-      },
+      // {
+      //   $lookup: {
+      //     from: 'lampiran',
+      //     let: { postId: '$id' },
+      //     pipeline: [
+      //       {
+      //         $match: {
+      //           $expr: {
+      //             $and: [
+      //               { $eq: ['$tabel_id', '$$postId'] },
+      //               { $eq: ['$tabel', 'post'] }
+      //             ]
+      //           }
+      //         }
+      //       }
+      //     ],
+      //     as: 'lampiran'
+      //   }
+      // },
 
       {
         $lookup: {
@@ -183,147 +183,17 @@ router.post('/viewData', async (req, res, next) => {
         // }
         $match: filter
       },
+      
 
       {
         $lookup: {
-          from: 'master_kategori_laporan',
-          localField: 'master_kategori_id',
+          from: 'post',
+          localField: 'post_id',
           foreignField: 'id',
-          as: 'kategorix'
+          as: 'post'
         }
-      },
-      {
-        $lookup: {
-          from: 'master_kategori_laporan_sub',
-          localField: 'master_sub_kategori_id',
-          foreignField: 'id',
-          as: 'sub_kategorix'
-        }
-      },
-
-      // Join master_kategori_laporan → langsung ambil uraian
-      {
-        $lookup: {
-          from: "master_kategori_laporan",
-          let: { mkid: "$master_kategori_id" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
-            { $project: { _id: 0, uraian: 1 } }
-          ],
-          as: "master_kategori_uraian"
-        }
-      },
-      {
-        $set: {
-          master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
-        }
-      },
-
-      // Join master_kategori_laporan_sub → langsung ambil uraian
-      {
-        $lookup: {
-          from: "master_kategori_laporan_sub",
-          let: { skid: "$master_sub_kategori_id" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
-            { $project: { _id: 0, uraian: 1 } }
-          ],
-          as: "master_sub_kategori_uraian"
-        }
-      },
-      {
-        $set: {
-          master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
-        }
-      },
-
-      // Join users → ambil nama
-      {
-        $lookup: {
-          from: "users",
-          localField: "user_id",
-          foreignField: "id",
-          as: "createdBy"
-        }
-      },
-      {
-        $set: {
-          createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
-        }
-      },
-
-      // Join lampiran (langsung filter di pipeline)
-      {
-        $lookup: {
-          from: "lampiran",
-          let: { postId: "$id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$tabel_id", "$$postId"] },
-                    { $eq: ["$tabel", "post"] }
-                  ]
-                }
-              }
-            },
-            { $project: { _id: 0, file: 1, filetype: 1, filethumbnail: 1 } }
-          ],
-          as: "lampiran"
-        }
-      },
-
-      // Join lokasi
-      {
-        $lookup: {
-          from: "post_lokasi",
-          localField: "id",
-          foreignField: "post_id",
-          as: "lokasi"
-        }
-      },
-
-      // Join post_keterangan
-      {
-        $lookup: {
-          from: "post_keterangan",
-          localField: "id",
-          foreignField: "post_id",
-          as: "post_keterangan"
-        }
-      },
-
-      // Join post_handle + unit_kerja langsung
-      {
-        $lookup: {
-          from: "post_handle",
-          let: { pid: "$id" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
-            {
-              $lookup: {
-                from: "unit_kerja",
-                localField: "master_unit_kerja_id",
-                foreignField: "id",
-                as: "unit_kerja"
-              }
-            },
-            { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
-            {
-              $project: {
-                _id: 0,
-                id: 1,
-                master_unit_kerja_id: 1,
-                status: 1,
-                "unit_kerja.id": 1,
-                "unit_kerja.unit_kerja": 1
-              }
-            }
-          ],
-          as: "post_handle"
-        }
-      },
+      },      
+      
 
       // Sort + paging
       { $sort: { created_at: -1 } },
@@ -349,6 +219,7 @@ router.post('/viewData', async (req, res, next) => {
     console.error('Gagal mengambil data post:', error);
     res.status(500).json({ message: 'Gagal mengambil data' });
   }
+
 })
 
 
