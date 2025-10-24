@@ -199,8 +199,7 @@ async function startSecretLoop() {
   const master_unit_kerja = require('./api/master/master_unit_kerja')
   app.use('/api/v1/master_unit_kerja', middleware.isLoggedIn, master_unit_kerja)
 
-  const master_client_autocomplete = require('./api/master/master_client_autocomplete')
-  app.use('/api/v1/master_client_autocomplete', master_client_autocomplete)
+
 
 
   
@@ -213,6 +212,9 @@ async function startSecretLoop() {
   
   const postingan_laporan_android = require('./api/postingan_laporan/postingan_laporan_android')
   app.use('/postingan_laporan_android', middleware.isLoggedIn, postingan_laporan_android)
+
+  const notifikasi_client = require('./api/notifikasi/android/notifikasi')
+  app.use('/notifikasi_android', middleware.isLoggedIn, notifikasi_client)
 
   const postingan_laporan_website = require('./api/postingan_laporan/postingan_laporan_website')
   app.use('/api/v1/postingan_laporan_website', middleware.isLoggedIn, postingan_laporan_website)

@@ -525,7 +525,7 @@ router.post('/chat_view', upload.fields([{ name: 'file', maxCount: 5 }]), async 
   } 
 })
 
-router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+router.post('/chat_send', async (req, res, next) => {
     var data = JSON.parse(req.body.data); 
     data.id = uniqid()
     data.created_by   = req.user.id
@@ -722,6 +722,77 @@ router.post('/get_rejection_reason', async (req, res, next) => {
     });
   }
 });
+
+// Verifikasi laporan untuk tindak lanjut status = 5 
+router.post('/verifikasi_laporan', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+ 
+  console.log('verifikasi_laporan');
+  console.log(req.body);
+
+  const data = req.body;
+  data.status = 5; // Status 5 = Verifikasi
+  data.created_at = new Date()
+  // data.keterangan = "";
+  const post = await getCollection('post');
+  const result = await post.updateOne({ id: data.id },
+    {
+      $set: {
+        status: data.status, // Status 5 = Verifikasi
+      }
+    })
+
+  var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+  if (simpanKeterangan === false) {
+    console.log('Gagal menyimpan keterangan');
+  }
+
+  const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
+  if (notificationData===false) {
+    console.log('gagal mengirim notificationData');
+  }  
+
+  responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");
+
+})
+
+
+router.post('/rating_laporan', async (req, res, next) => {
+ 
+  console.log('verifikasi_laporan');
+  console.log(req.body);
+
+  const data = req.body;
+  data.status = 6; // Status 6 = Rating
+  data.createdBy = req.user.id
+  data.created_at = new Date()
+  // data.keterangan = "";
+  const post = await getCollection('post');
+  const result = await post.updateOne({ id: data.post_id },
+    {
+      $set: {
+        status: data.status, // Status 6 = Rating
+      }
+    })
+
+  var simpanKeterangan = await simpanupdateKeterangan(data, data.post_id, req)
+  if (simpanKeterangan === false) {
+    console.log('Gagal menyimpan keterangan');
+  }
+
+  const rating = await getCollection('rating');
+  const result_rating = await rating.insertOne(data);  
+
+  // const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
+  // if (notificationData===false) {
+  //   console.log('gagal mengirim notificationData');
+  // }  
+
+  responQuery(result_rating, req, res, next, "Berhasil Melakukan Rating", "Gagal Melakukan Rating");
+
+})
+
+
+
 
 // Alternatif: Endpoint untuk mendapatkan semua keterangan suatu post
 router.post('/get_post_keterangan_history', async (req, res, next) => {
