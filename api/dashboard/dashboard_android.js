@@ -95,6 +95,19 @@ router.post('/viewData', async (req, res, next) => {
               }
             },
             {
+                $project: {
+                    'admin_info.nama': 1,
+                    'admin_info.username': 1,
+                    // field lain yang ingin kamu pertahankan di post_keterangan
+                    keterangan: 1,
+                    status: 1,
+                    created_at: 1,
+                    user_id: 1,
+                    post_id: 1,
+                    id: 1
+                }
+            },            
+            {
               $addFields: {
                 admin_name: '$admin_info.nama'
               }
@@ -127,7 +140,7 @@ router.post('/viewData', async (req, res, next) => {
           createdBy: '$createdBy.nama'
         }
       }, 
-      
+
       {
         $sort: { createdAt: -1 }
       },
