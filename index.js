@@ -226,6 +226,9 @@ async function startSecretLoop() {
   const postingan_laporan_website = require('./api/postingan_laporan/postingan_laporan_website')
   app.use('/api/v1/postingan_laporan_website', middleware.isLoggedIn, postingan_laporan_website)
 
+  const dashboard_web = require('./api/dashboard/dashboard_web')
+  app.use('/api/v1/dashboard_web', middleware.isLoggedIn, dashboard_web)
+
 
 
 function notFound(req, res, next) {
