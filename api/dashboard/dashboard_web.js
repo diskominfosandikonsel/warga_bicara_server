@@ -179,7 +179,7 @@ router.post('/jmlAduan', async (req, res, next) => {
   console.log("jmlAduan"); 
   res.status(200).json({ message: 'Gagal mengambil data jmlAduan' });
 })
-
+// ✅
 router.post('/popularIssue', async (req, res, next) => { 
 
     function getRandomColor() {
@@ -296,9 +296,112 @@ router.post('/popularIssue', async (req, res, next) => {
 
 })
 
-router.post('/demografiPenggunaAplikasi', async (req, res, next) => { 
-  console.log("demografiPenggunaAplikasi"); 
-  res.status(200).json({ message: 'Gagal mengambil data demografiPenggunaAplikasi' });
+
+router.post('/demografiPenggunaAplikasiUmur', async (req, res, next) => { 
+const now = new Date();
+
+const users = await getCollection('users')
+const result = await users.aggregate([
+  {
+    $match: {
+      tgl_lahir: { $exists: true, $ne: "" }
+    }
+  },
+  {
+    // Coba parsing dari berbagai format tanggal
+    $addFields: {
+      possibleDates: [
+        { $dateFromString: { dateString: "$tgl_lahir", format: "%Y-%m-%d", onError: null } },
+        { $dateFromString: { dateString: "$tgl_lahir", format: "%d-%m-%Y", onError: null } },
+        { $dateFromString: { dateString: "$tgl_lahir", format: "%m-%d-%Y", onError: null } },
+        { $dateFromString: { dateString: "$tgl_lahir", format: "%Y/%m/%d", onError: null } },
+        { $dateFromString: { dateString: "$tgl_lahir", format: "%d/%m/%Y", onError: null } },
+        { $dateFromString: { dateString: "$tgl_lahir", format: "%m/%d/%Y", onError: null } }
+      ]
+    }
+  },
+  {
+    $addFields: {
+      parsedDate: {
+        $first: {
+          $filter: {
+            input: "$possibleDates",
+            as: "d",
+            cond: { $ne: ["$$d", null] }
+          }
+        }
+      }
+    }
+  },
+  {
+    $addFields: {
+      age: {
+        $cond: [
+          { $ne: ["$parsedDate", null] },
+          {
+            $floor: {
+              $divide: [
+                { $subtract: [now, "$parsedDate"] },
+                1000 * 60 * 60 * 24 * 365
+              ]
+            }
+          },
+          null
+        ]
+      }
+    }
+  },
+  {
+    $bucket: {
+      groupBy: "$age",
+      boundaries: [0, 20, 30, 40, 50, 200],
+      default: "Unknown",
+      output: { count: { $sum: 1 } }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      range: {
+        $switch: {
+          branches: [
+            { case: { $eq: ["$_id", 0] }, then: "<20" },
+            { case: { $eq: ["$_id", 20] }, then: "20-30" },
+            { case: { $eq: ["$_id", 30] }, then: "31-40" },
+            { case: { $eq: ["$_id", 40] }, then: "41-50" },
+            { case: { $eq: ["$_id", 50] }, then: ">50" }
+          ],
+          default: "Unknown"
+        }
+      },
+      count: 1
+    }
+  }
+]).toArray();
+
+// ----------------------------
+// Tahap Node.js: isi yang kosong dengan nilai 0
+// ----------------------------
+const ageRanges = ["<20", "20-30", "31-40", "41-50", ">50"];
+const randomColor = () => `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+
+// Buat map hasil query (biar gampang cari)
+const dataMap = result.reduce((acc, item) => {
+  acc[item.range] = item.count;
+  return acc;
+}, {});
+
+// Isi semua range (yang tidak ada jadi 0)
+const formatted = ageRanges.map(range => ({
+  type: 'column',
+  name: range,
+  data: [dataMap[range] || 0],
+  color: randomColor()
+}));
+
+
+  // console.log("demografiPenggunaAplikasi"); 
+  res.status(200).json(formatted);
 })
 
 router.post('/avgTimeVerifikasi', async (req, res, next) => { 
