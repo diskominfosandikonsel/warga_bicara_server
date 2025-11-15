@@ -198,11 +198,6 @@ async function startSecretLoop() {
 
   const master_unit_kerja = require('./api/master/master_unit_kerja')
   app.use('/api/v1/master_unit_kerja', middleware.isLoggedIn, master_unit_kerja)
-
-
-
-
-  
   
   // =========================== MASTER ===========================
   
@@ -228,8 +223,37 @@ async function startSecretLoop() {
 
   const dashboard_web = require('./api/dashboard/dashboard_web')
   app.use('/api/v1/dashboard_web', middleware.isLoggedIn, dashboard_web)
+  
+  // =========================== PUBLISH ===========================
+  
+  const publish_master_agama = require('./api/master/publish/master_agama')
+  app.use('/publish_master_agama', publish_master_agama)
 
+  const publish_master_deskel = require('./api/master/publish/master_deskel')
+  app.use('/publish_master_deskel', publish_master_deskel)
 
+  const publish_master_jeniskelamin = require('./api/master/publish/master_jeniskelamin')
+  app.use('/publish_master_jeniskelamin', publish_master_jeniskelamin)
+
+  const publish_master_kabupaten = require('./api/master/publish/master_kabupaten')
+  app.use('/publish_master_kabupaten', publish_master_kabupaten)
+
+  const publish_master_kecamatan = require('./api/master/publish/master_kecamatan')
+  app.use('/publish_master_kecamatan', publish_master_kecamatan)
+
+  const publish_master_prov = require('./api/master/publish/master_prov')
+  app.use('/publish_master_prov', publish_master_prov)
+
+  const publish_master_pekerjaan = require('./api/master/publish/master_pekerjaan')
+  app.use('/publish_master_pekerjaan', publish_master_pekerjaan)
+
+  const publish_master_pendidikan = require('./api/master/publish/master_pendidikan')
+  app.use('/publish_master_pendidikan', publish_master_pendidikan)
+
+  const publish_master_client_autocomplete = require('./api/master/publish/master_client_autocomplete')
+  app.use('/publish_master_client_autocomplete', publish_master_client_autocomplete)
+
+  // =========================== PUBLISH ===========================
 
 function notFound(req, res, next) {
   res.status(404);
