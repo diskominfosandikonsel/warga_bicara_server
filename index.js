@@ -251,7 +251,7 @@ async function startSecretLoop() {
   app.use('/publish_master_pendidikan', publish_master_pendidikan)
 
   const publish_master_client_autocomplete = require('./api/master/publish/master_client_autocomplete')
-  app.use('/publish_master_client_autocomplete', publish_master_client_autocomplete)
+  app.use('/api/v1/master_client_autocomplete', publish_master_client_autocomplete)
 
   // =========================== PUBLISH ===========================
 
