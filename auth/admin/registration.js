@@ -86,7 +86,7 @@ router.post('/signup', async (req, res, next) => {
                     nik                         : req.body.nik,
                     nip                         : req.body.nip,
                     email                       : req.body.email,
-                    // authorization               : req.body.authorization,
+                    authorization               : req.body.authorization,
                     kategori_user               : req.body.kategori_user,
                     master_unit_kerja_id        : req.body.master_unit_kerja_id,
                     is_active                   : true, // default true
