@@ -20,21 +20,27 @@ router.post('/viewData', async (req, res, next) => {
     const limit = 10;
     const cari = req.body.cari || '';
 
-    const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
+    // const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
 
     const filter = {};
-    if (cari) {
-      filter.title = { $regex: cari, $options: 'i' };
-    }
-    if (master_kategori_laporan_id) {
-      filter.master_kategori_id = master_kategori_laporan_id;
-    }
-    if (master_kategori_laporan_sub_id) {
-      filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
-    }
-    if (status) {
-      filter.status = parseInt(status);
-    }
+
+    filter.user_id = req.user.id;
+
+    // if (cari) {
+    //   filter.title = { $regex: cari, $options: 'i' };
+    // }
+    // if (master_kategori_laporan_id) {
+    //   filter.master_kategori_id = master_kategori_laporan_id;
+    // }
+    // if (master_kategori_laporan_sub_id) {
+    //   filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
+    // }
+    // if (status) {
+    //   filter.status = parseInt(status);
+    // }
+
+    console.log('Filter yang digunakan:', filter);
+    
 
     const pipelinex1 = [
       {
@@ -220,6 +226,18 @@ router.post('/viewData', async (req, res, next) => {
     res.status(500).json({ message: 'Gagal mengambil data' });
   }
 
+})
+
+
+router.post('/readNotif', async (req, res, next) => {
+    const data = req.body; 
+    const notifikasi = await getCollection('notifikasi');
+    const result = await notifikasi.updateOne({ id :data.id }, 
+        { $set: { 
+                    read         : true
+                }
+        }) 
+    responQuery(result, req, res, next, "notifikasi berhasil diupdate", "notifikasi gagal diupdate");
 })
 
 
