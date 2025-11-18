@@ -39,147 +39,8 @@ router.post('/viewData', async (req, res, next) => {
     //   filter.status = parseInt(status);
     // }
 
-    console.log('Filter yang digunakan:', filter);
-    
-
-    const pipelinex1 = [
-      {
-        $match: {
-          title: { $regex: cari, $options: 'i' } // LIKE '%search%' (case-insensitive)
-        }
-      },
-
-      // {
-      //   $lookup: {
-      //     from: 'lampiran',
-      //     let: { postId: '$id' },
-      //     pipeline: [
-      //       {
-      //         $match: {
-      //           $expr: {
-      //             $and: [
-      //               { $eq: ['$tabel_id', '$$postId'] },
-      //               { $eq: ['$tabel', 'post'] }
-      //             ]
-      //           }
-      //         }
-      //       }
-      //     ],
-      //     as: 'lampiran'
-      //   }
-      // },
-
-      {
-        $lookup: {
-          from: 'post_lokasi',
-          localField: 'id',      // field di koleksi post
-          foreignField: 'post_id', // field di koleksi post_lokasi
-          as: 'lokasi'
-        }
-      },
-
-      {
-        $lookup: {
-          from: 'post_keterangan',
-          localField: 'id',         // field di koleksi post
-          foreignField: 'post_id',  // field di koleksi post_keterangan
-          as: 'post_keterangan'
-        }
-      },
-      {
-        $lookup: {
-          from: 'post_handle',
-          localField: 'id',         // field di koleksi post
-          foreignField: 'post_id',  // field di koleksi post_handle
-          as: 'post_handle'
-        }
-      },
-      {
-        $lookup: {
-          from: 'unit_kerja',
-          localField: 'post_handle.master_unit_kerja_id',         // field di koleksi post
-          foreignField: 'id',                       // field di koleksi unit_kerja
-          as: 'unit_kerja'
-        }
-      },
-
-      {
-        $lookup: {
-          from: 'master_kategori_laporan',
-          localField: 'master_kategori_id',         // field di koleksi post
-          foreignField: 'id',  // field di koleksi post_keterangan
-          as: 'master_kategori_uraian'
-        }
-      },
-      {
-        $unwind: {
-          path: '$master_kategori_uraian',
-          preserveNullAndEmptyArrays: true // kalau master_kategori_laporan_uraian tidak ditemukan, tetap lanjut
-        }
-      },
-
-      {
-        $addFields: {
-          master_kategori_uraian: '$master_kategori_uraian.uraian' // ganti array user jadi nama string saja
-        }
-      },
-
-
-      {
-        $lookup: {
-          from: 'master_kategori_laporan_sub',
-          localField: 'master_sub_kategori_id',         // field di koleksi post
-          foreignField: 'id',  // field di koleksi post_keterangan
-          as: 'master_sub_kategori_uraian'
-        }
-      },
-      {
-        $unwind: {
-          path: '$master_sub_kategori_uraian',
-          preserveNullAndEmptyArrays: true // kalau master_kategori_laporan_uraian tidak ditemukan, tetap lanjut
-        }
-      },
-
-      {
-        $addFields: {
-          master_sub_kategori_uraian: '$master_sub_kategori_uraian.uraian' // ganti array user jadi nama string saja
-        }
-      },
-
-
-
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user_id',
-          foreignField: 'id',
-          as: 'createdBy'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$createdBy',
-          preserveNullAndEmptyArrays: true // kalau user tidak ditemukan, tetap lanjut
-        }
-      },
-
-      {
-        $addFields: {
-          createdBy: '$createdBy.nama' // ganti array user jadi nama string saja
-        }
-      },
-
-      {
-        $sort: { createdAt: -1 }
-      },
-      {
-        $skip: (page - 1) * limit
-      },
-      {
-        $limit: limit
-      }
-    ];
+    // console.log('Filter yang digunakan:', filter);
+     
 
     const pipeline = [
       // Filter judul
@@ -239,8 +100,6 @@ router.post('/readNotif', async (req, res, next) => {
         }) 
     responQuery(result, req, res, next, "notifikasi berhasil diupdate", "notifikasi gagal diupdate");
 })
-
-
 
 
 const responQuery = async (result, req, res, next, successMessage, errorMessage) => {
