@@ -322,8 +322,7 @@ router.post('/autocomplete_jenis_pekerjaan', async (req, res, next) => {
     // Ambil data maksimal 10 untuk keperluan autocomplete
     const result = await master_pekerjaan
       .find(filter)
-      .sort({ urutan: 1 })
-      .limit(10)
+      .sort({ urutan: 1 }) 
       .toArray();
 
     if (result.length <= 0) {
@@ -355,7 +354,6 @@ router.post('/autocomplete_jenis_pendidikan', async (req, res, next) => {
     const result = await master_pendidikan
       .find(filter)
       .sort({ urutan: 1 })
-      .limit(10)
       .toArray();
 
     if (result.length <= 0) {
