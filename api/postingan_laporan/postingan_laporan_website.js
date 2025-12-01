@@ -393,6 +393,8 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
         status: data.status, // Status 2 = Delegasi              
         master_kategori_id: data.master_kategori_laporan_id,
         master_sub_kategori_id: data.master_kategori_laporan_sub_id,
+        master_kec_id: data.master_kec_id,
+        master_deskel_id: data.master_deskel_id
       }
     })
 
@@ -693,7 +695,7 @@ router.post('/chat_view', upload.fields([{ name: 'file', maxCount: 5 }]), async 
 })
 
 router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  // var data = JSON.parse(req.body.data);
+  var data = JSON.parse(req.body.data);
   // console.log(data);
   
   data.id = uniqid()
