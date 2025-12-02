@@ -703,6 +703,10 @@ router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async 
   data.created_at = new Date()
   const chat = await getCollection('chat');
   const result = await chat.insertOne(data);
+  const notificationData = await sendNotification(data.post_id, 3, 'Pesan Baru', 'Pesan baru dari admin', 'Pesan baru dari admin', data, false)
+  if (notificationData===false) {
+    console.log('gagal mengirim notificationData');
+  }    
   responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
 })
 
@@ -854,8 +858,16 @@ router.post('/tindak_lanjut_laporan', upload.fields([{ name: 'file', maxCount: 5
               console.log('Gagal menyimpan file');
             }
 
+            
+
             const listMenu = await getCollection('tindak_lanjut_laporan');
             const result = await listMenu.insertOne(data);
+
+            const notificationData = await sendNotification(data.post_id, 4, 'Tindak Lanjut', 'Laporan Telah di tindak lanjuti', 'Laporan anda telah di tindak lanjuti. Silahkan lihat hasil tindak lanjut.', data, false)
+            if (notificationData===false) {
+              console.log('gagal mengirim notificationData');
+            }    
+
             responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
             
 
