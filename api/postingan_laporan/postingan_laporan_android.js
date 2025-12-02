@@ -402,6 +402,7 @@ router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (r
 router.post('/editData', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
   const data = JSON.parse(req.body.data); // body: { id: "...", nama: "...", dst }
   const idLaporan = data.id;
+        data.status = 1
 
   try {
     const post = await getCollection('post');
