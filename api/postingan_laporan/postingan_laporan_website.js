@@ -835,6 +835,142 @@ router.post('/removeData', async (req, res, next) => {
 });
 
 
+router.post('/tindak_lanjut_laporan', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
+
+    var data = JSON.parse(req.body.data); 
+
+    data.id = uniqid()
+    data.created_at   = new Date()
+    data.user_id      = req.user.id 
+
+    try {
+        const uploadedFiles = req.files['file']; 
+
+        if (uploadedFiles && uploadedFiles.length > 0) {
+            // Jika ada file yang diupload, lakukan sesuatu dengan file tersebut
+            // console.log('File yang diterima:', uploadedFiles.length); 
+            var uploadfile =  await simpanfile(uploadedFiles, data.id, 'tindak_lanjut_laporan');
+            if(uploadfile===false){
+              console.log('Gagal menyimpan file');
+            }
+
+            const listMenu = await getCollection('tindak_lanjut_laporan');
+            const result = await listMenu.insertOne(data);
+            responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
+            
+
+        } else {
+            console.log('Tidak ada file yang diupload');
+            return res.status(400).json({ message: 'Tidak ada file yang diupload' });
+        }
+    } catch (err) {
+        next(err);
+    } 
+
+ 
+})
+
+
+router.post('/tindak_lanjut_laporan_view', async (req, res) => {
+  try {
+    const post = await getCollection('tindak_lanjut_laporan');
+
+    const laporanId = req.body.tabel_id; // ID laporan induk
+
+    const pipeline = [
+      {
+        $match: {
+          tabel_id: laporanId
+        }
+      },
+
+      // === JOIN KE COLLECTION LAMPIRAN ===
+      {
+        $lookup: {
+          from: "lampiran",
+          let: { postId: "$id" }, 
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$tabel", "tindak_lanjut_laporan"] },
+                    { $eq: ["$tabel_id", "$$postId"] }
+                  ]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                file: 1,
+                filetype: 1,
+                filethumbnail: 1
+              }
+            }
+          ],
+          as: "lampiran_tindak_lanjut"
+        }
+      },
+
+      { $sort: { created_at: -1 } }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+
+    res.status(200).json({
+      tabel_id: laporanId,
+      total: results.length,
+      data: results
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: 'Gagal mengambil data tindak lanjut + lampiran' });
+  }
+});
+
+router.post('/tindak_lanjut_laporan_hapus', async (req, res, next) => {
+
+  const data = req.body;
+  var tindak_lanjut_laporan_id = data.id; 
+
+  if (!tindak_lanjut_laporan_id) {
+    return res.status(400).json({ message: 'idLaporan wajib dikirim' });
+  }
+  
+  try {
+    const lampiran = await getCollection('lampiran');
+
+    // Ambil semua file yang terkait
+    const fileList = await lampiran.find({ tabel: 'tindak_lanjut_laporan', tabel_id: tindak_lanjut_laporan_id }).toArray();
+
+    // Hapus file fisik
+    fileList.forEach(file => {
+      IMAGE.hapus_file(file.file);
+      IMAGE.hapus_file(file.filethumbnail);
+    });
+
+    // Hapus data dari database
+    const hapusfile = await lampiran.deleteMany({ tabel: 'tindak_lanjut_laporan', tabel_id: tindak_lanjut_laporan_id });
+
+    const post = await getCollection('tindak_lanjut_laporan');
+    const result = await post.deleteOne({ id: tindak_lanjut_laporan_id });    
+
+    responQuery(result, req, res, next, "Data berhasil dihapus", "Data gagal dihapus");
+
+  } catch (err) {
+    console.error('Gagal menghapus lampiran:', err);
+    res.status(500).json({ message: 'Gagal menghapus lampiran' });
+  }
+
+});
+
+
+
+
+
+
 async function simpanupdateKeterangan(data, idnya, req) {
   try {
     const post = await getCollection('post_keterangan');
@@ -886,7 +1022,7 @@ async function delegasikeopd(data, idnya) {
   }
 }
 
-async function simpanfile(datafile, idLaporan) {
+async function simpanfile(datafile, idLaporan, tabel) {
   try {
     const lampiran = await getCollection('lampiran');
 
@@ -900,7 +1036,8 @@ async function simpanfile(datafile, idLaporan) {
       const payload = {
         _id: new ObjectId(),       // MongoDB ObjectId
         id: uniqid(),             // Custom ID
-        tabel: "post",
+        // tabel: "post",
+        tabel: tabel,
         tabel_id: idLaporan,
         file: element.filename,
         filetype: element.mimetype,
