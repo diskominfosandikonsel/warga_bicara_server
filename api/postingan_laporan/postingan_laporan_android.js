@@ -174,6 +174,15 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
+      {
+        $lookup: {
+          from: 'tindak_lanjut_laporan',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'tindak_lanjut_laporan'
+        }
+      },      
+
       // Update lookup post_keterangan dengan join ke users untuk info admin
       {
         $lookup: {
@@ -854,6 +863,66 @@ router.post('/get_post_keterangan_history', async (req, res, next) => {
     });
   }
 });
+
+router.post('/tindak_lanjut_laporan_view', async (req, res) => {
+  try {
+    const post = await getCollection('tindak_lanjut_laporan');
+
+    const laporanId = req.body.tabel_id; // ID laporan induk
+
+    const pipeline = [
+      {
+        $match: {
+          tabel_id: laporanId
+        }
+      },
+
+      // === JOIN KE COLLECTION LAMPIRAN ===
+      {
+        $lookup: {
+          from: "lampiran",
+          let: { postId: "$id" }, 
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$tabel", "tindak_lanjut_laporan"] },
+                    { $eq: ["$tabel_id", "$$postId"] }
+                  ]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                file: 1,
+                filetype: 1,
+                filethumbnail: 1
+              }
+            }
+          ],
+          as: "lampiran_tindak_lanjut"
+        }
+      },
+
+      { $sort: { created_at: -1 } }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+
+    res.status(200).json({
+      tabel_id: laporanId,
+      total: results.length,
+      data: results
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: 'Gagal mengambil data tindak lanjut + lampiran' });
+  }
+});
+
 
 
 module.exports = router
