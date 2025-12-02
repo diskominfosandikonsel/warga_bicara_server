@@ -417,35 +417,38 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
 
 })
 
-
-
 router.post('/viewDataOPD', async (req, res, next) => {
-
-  // var opds = getOPD({unit_kerja_id:"EtTbFb6EzYZt9mMJL"});
   try {
     const post = await getCollection('post');
+
     const page = parseInt(req.body.page) || 1;
     const limit = 10;
     const cari = req.body.cari || '';
-    const unit_kerja_id = req.user.auth.master_unit_kerja_id; //Get ID Master Unit Kerja
+    const unit_kerja_id = req.user.auth.master_unit_kerja_id;
     const userId = req.user.id;
+
     const laporanId = req.body.tabel_id;
+    const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
 
+    // ==========================
+    //  FILTER DINAMIS
+    // ==========================
+    const filter = {
+      tabel_id: laporanId
+    };
 
+    if (cari) filter.title = { $regex: cari, $options: 'i' };
+    if (master_kategori_laporan_id) filter.master_kategori_id = master_kategori_laporan_id;
+    if (master_kategori_laporan_sub_id) filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
+    if (status) filter.status = parseInt(status);
+
+    // ==========================
+    //  PIPELINE AGGREGATION
+    // ==========================
     const pipeline = [
-      {
-        $match: {
-          tabel_id: laporanId
-        }
-      },
-      // Filter judul
-      {
-        $match: {
-          title: { $regex: cari, $options: "i" }
-        }
-      },
+      { $match: filter },
 
-      // Join master_kategori_laporan → langsung ambil uraian
+      // Join master_kategori_laporan
       {
         $lookup: {
           from: "master_kategori_laporan",
@@ -457,13 +460,9 @@ router.post('/viewDataOPD', async (req, res, next) => {
           as: "master_kategori_uraian"
         }
       },
-      {
-        $set: {
-          master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
-        }
-      },
+      { $set: { master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] } } },
 
-      // Join master_kategori_laporan_sub → langsung ambil uraian
+      // Join master_kategori_laporan_sub
       {
         $lookup: {
           from: "master_kategori_laporan_sub",
@@ -477,11 +476,13 @@ router.post('/viewDataOPD', async (req, res, next) => {
       },
       {
         $set: {
-          master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
+          master_sub_kategori_uraian: {
+            $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0]
+          }
         }
       },
 
-      // Join users → ambil nama
+      // Join users
       {
         $lookup: {
           from: "users",
@@ -490,13 +491,9 @@ router.post('/viewDataOPD', async (req, res, next) => {
           as: "createdBy"
         }
       },
-      {
-        $set: {
-          createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
-        }
-      },
+      { $set: { createdBy: { $arrayElemAt: ["$createdBy.nama", 0] } } },
 
-      // Join lampiran (langsung filter di pipeline)
+      // Join lampiran
       {
         $lookup: {
           from: "lampiran",
@@ -518,7 +515,7 @@ router.post('/viewDataOPD', async (req, res, next) => {
         }
       },
 
-      // Join lokasi
+      // Join post_lokasi
       {
         $lookup: {
           from: "post_lokasi",
@@ -538,7 +535,7 @@ router.post('/viewDataOPD', async (req, res, next) => {
         }
       },
 
-      // Join post_handle + unit_kerja langsung
+      // Join post_handle + unit_kerja
       {
         $lookup: {
           from: "post_handle",
@@ -568,13 +565,15 @@ router.post('/viewDataOPD', async (req, res, next) => {
           as: "post_handle"
         }
       },
+
+      // Filter untuk Unit Kerja yang sedang login
       {
         $match: {
           "post_handle.master_unit_kerja_id": unit_kerja_id
         }
       },
 
-      // Sort + paging
+      // Sort & Paging
       { $sort: { created_at: -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit }
@@ -582,23 +581,23 @@ router.post('/viewDataOPD', async (req, res, next) => {
 
     const results = await post.aggregate(pipeline).toArray();
 
-    // Hitung total data (tanpa $skip dan $limit)
-    const totalData = await post.countDocuments({
-      title: { $regex: cari, $options: 'i' }
-    });
+    // ==========================
+    //  Hitung total data dengan filter YANG SAMA
+    // ==========================
+    const totalData = await post.countDocuments(filter);
 
     res.status(200).json({
       currentPage: page,
       totalPage: Math.ceil(totalData / limit),
       totalData,
       data: results,
-      currentUserId: userId // Tambahkan baris ini
+      currentUserId: userId
     });
   } catch (error) {
     console.error('Gagal mengambil data post:', error);
     res.status(500).json({ message: 'Gagal mengambil data' });
   }
-})
+});
 
 router.post('/tolakAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
   const data = req.body;
@@ -758,7 +757,6 @@ router.post('/chat_delete', async (req, res, next) => {
     });
   }
 });
-
 
 router.post('/removeData', async (req, res, next) => {
   const data = req.body;
