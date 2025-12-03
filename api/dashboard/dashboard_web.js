@@ -424,6 +424,63 @@ router.post('/sebaranAduan', async (req, res, next) => {
   res.status(200).json({ message: 'Gagal mengambil data sebaranAduan' });
 })
 
- 
+// ================================================================
+router.post('/total_laporan', async (req, res) => {
+  try {
+    const post = await getCollection('post');
+
+    // Ambil data filter dari body
+    const { start_date, end_date, status, kategori_id } = req.body || {};
+
+    const filter = {};
+
+    // Filter tanggal jika dikirim
+    if (start_date && end_date) {
+      filter.created_at = {
+        $gte: new Date(start_date),
+        $lte: new Date(end_date + "T23:59:59")
+      };
+    }
+
+    // Filter status jika dikirim
+    if (status) {
+      filter.status = status;
+    }
+
+    // Filter kategori jika dikirim
+    if (kategori_id) {
+      filter.master_kategori_id = kategori_id;
+    }
+
+    // ====== Hitung total keseluruhan ======
+    const total_laporan = await post.countDocuments(filter);
+
+    // ====== Hitung total per status ======
+    const total_per_status = await post.aggregate([
+      { $match: filter },
+      { $group: { _id: "$status", jumlah: { $sum: 1 } } }
+    ]).toArray();
+
+    // ====== Hitung total per kategori ======
+    const total_per_kategori = await post.aggregate([
+      { $match: filter },
+      { $group: { _id: "$master_kategori_id", jumlah: { $sum: 1 } } }
+    ]).toArray();
+
+    return res.json({
+      success: true,
+      total_laporan,
+      total_per_status,
+      total_per_kategori
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal menghitung total laporan"
+    });
+  }
+});
 
 module.exports = router

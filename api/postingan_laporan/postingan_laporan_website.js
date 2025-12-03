@@ -883,14 +883,22 @@ router.post('/tindak_lanjut_laporan', upload.fields([{ name: 'file', maxCount: 5
 
 router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   try {
-    const post = await getCollection('tindak_lanjut_laporan');
 
-    const laporanId = req.body.tabel_id; // ID laporan induk
+    const data = req.body;
+    const post_id = req.body.post_id; // ID laporan induk
+    const filter = {};
+    // if (data.post_id) {
+    //   filter.post_id = data.post_id;
+    // }
+    console.log(data);
+    
+
+    const post = await getCollection('tindak_lanjut_laporan');
 
     const pipeline = [
       {
         $match: {
-          tabel_id: laporanId
+          post_id: post_id
         }
       },
 
@@ -929,7 +937,7 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
     const results = await post.aggregate(pipeline).toArray();
 
     res.status(200).json({
-      tabel_id: laporanId,
+      // tabel_id: post_id,
       total: results.length,
       data: results
     });
