@@ -419,10 +419,10 @@ router.post('/demografiPengguna', async (req, res, next) => {
 //   res.status(200).json({ message: 'Gagal mengambil data kinerjaOPD' });
 // })
 
-router.post('/sebaranAduan', async (req, res, next) => { 
-  console.log("sebaranAduan"); 
-  res.status(200).json({ message: 'Gagal mengambil data sebaranAduan' });
-})
+// router.post('/sebaranAduan', async (req, res, next) => { 
+//   console.log("sebaranAduan"); 
+//   res.status(200).json({ message: 'Gagal mengambil data sebaranAduan' });
+// })
 
 // ==========================================================================================
 
@@ -909,4 +909,151 @@ router.post('/kinerjaOPD', async (req, res, next) => {
   }
 })
 
+router.post('/sebaranAduan', async (req, res, next) => { 
+  try {
+    const post = await getCollection('post');
+    
+    const { start_date, end_date } = req.body || {};
+
+    // ====== FILTER TANGGAL ======
+    const dateFilter = {};
+    if (start_date && end_date) {
+      dateFilter.created_at = {
+        $gte: new Date(start_date),
+        $lte: new Date(end_date + "T23:59:59")
+      };
+    }
+
+    // ====== FILTER STATUS (HANYA SELESAI) ======
+    const statusFilter = { status: 6 };
+
+    // ====== GABUNGKAN SEMUA FILTER ======
+    const combinedFilter = { ...dateFilter, ...statusFilter };
+
+    // ====== AMBIL SEMUA KECAMATAN UNIK (TANPA FILTER TANGGAL) ======
+    const allKecamatan = await post.aggregate([
+      {
+        $group: {
+          _id: '$nama_kecamatan'
+        }
+      },
+      {
+        $match: {
+          _id: { $ne: null, $ne: '' }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      },
+      {
+        $project: {
+          _id: 0,
+          kecamatan_name: '$_id'
+        }
+      }
+    ]).toArray();
+
+    // ====== AGREGASI SEBARAN ADUAN PER KECAMATAN (SESUAI FILTER TANGGAL & STATUS) ======
+    const sebaranData = await post.aggregate([
+      {
+        $match: combinedFilter
+      },
+      {
+        $group: {
+          _id: '$nama_kecamatan',
+          total_aduan: { $sum: 1 }
+        }
+      },
+      {
+        $match: {
+          _id: { $ne: null, $ne: '' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          kecamatan_name: '$_id',
+          total_aduan: 1
+        }
+      }
+    ]).toArray();
+
+    // ====== BUAT MAP DARI DATA SEBARAN ======
+    const sebaranMap = {};
+    sebaranData.forEach(item => {
+      sebaranMap[item.kecamatan_name] = item.total_aduan;
+    });
+
+    // ====== GABUNGKAN: SEMUA KECAMATAN + DATA SEBARAN (ISI 0 JIKA TIDAK ADA) ======
+    const completeSebaranData = allKecamatan.map(kec => ({
+      kecamatan_name: kec.kecamatan_name,
+      total_aduan: sebaranMap[kec.kecamatan_name] || 0
+    }));
+
+    // ====== SORT BERDASARKAN TOTAL ADUAN (DESCENDING) ======
+    completeSebaranData.sort((a, b) => b.total_aduan - a.total_aduan);
+
+    // ====== HITUNG TOTAL ADUAN ======
+    const total_all_aduan = completeSebaranData.reduce((sum, item) => sum + item.total_aduan, 0);
+
+    // ====== FORMAT DATA UNTUK HIGHCHARTS ======
+    const categories = completeSebaranData.map(item => item.kecamatan_name);
+    const data = completeSebaranData.map(item => item.total_aduan);
+
+    return res.status(200).json({
+      success: true,
+      metadata: {
+        total_kecamatan: completeSebaranData.length,
+        total_aduan: total_all_aduan,
+        period: {
+          start_date: start_date || 'Semua waktu',
+          end_date: end_date || 'Semua waktu'
+        }
+      },
+      chart: {
+        backgroundColor: 'transparent',
+        type: 'column',
+        title: {
+          text: 'Sebaran Aduan Per Wilayah',
+          align: 'left'
+        },
+        credits: {
+          enabled: false
+        },
+        xAxis: {
+          categories: categories,
+          crosshair: true,
+          accessibility: {
+            description: 'Kecamatan'
+          }
+        },
+        yAxis: {
+          title: {
+            text: 'Jumlah Aduan'
+          }
+        },
+        plotOptions: {
+          column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+          }
+        },
+        series: [
+          {
+            type: 'column',
+            name: 'Jumlah Aduan',
+            data: data
+          }
+        ]
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data sebaran aduan"
+    });
+  }
+})
 module.exports = router
