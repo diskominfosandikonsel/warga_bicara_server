@@ -128,8 +128,8 @@ const id = require('volleyball/lib/id');
 // })
 
 router.post('/viewData', async (req, res, next) => { 
-  console.log("req.user.id");
-  console.log(req.user.id);
+  // console.log("req.user.id");
+  // console.log(req.user.id);
   
   try {
     const post = await getCollection('post');
@@ -192,6 +192,27 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
+
+      // === TAMBAHAN: JOIN KE COLLECTION LIKES ===
+      {
+        $lookup: {
+          from: 'likes',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'likes_data'
+        }
+      },
+
+      // === TAMBAHAN: JOIN KE COLLECTION COMMENTS ===
+      {
+        $lookup: {
+          from: 'comments',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'comments_data'
+        }
+      },      
+
       
 
       // Update lookup post_keterangan dengan join ke users untuk info admin
@@ -250,24 +271,43 @@ router.post('/viewData', async (req, res, next) => {
 
       {
         $addFields: {
-          createdBy: '$createdBy.nama'
+          createdBy: '$createdBy.nama',
+          // === TAMBAHAN: HITUNG JUMLAH LIKES ===
+          total_likes: { $size: '$likes_data' },
+          // === TAMBAHAN: HITUNG JUMLAH COMMENTS (HANYA KOMENTAR UTAMA) ===
+          total_comments: {
+            $size: {
+              $filter: {
+                input: '$comments_data',
+                as: 'comment',
+                cond: { $eq: ['$$comment.parent_id', null] }
+              }
+            }
+          }          
+        }
+      },
+
+      {
+        $project: {
+          likes_data: 0,
+          comments_data: 0
         }
       },
 
       {
         $sort: { createdAt: -1 }
       },
-      {
-        $skip: (page - 1) * limit
-      },
-      {
-        $limit: limit
-      }
+      // {
+      //   $skip: (page - 1) * limit
+      // },
+      // {
+      //   $limit: limit
+      // }
     ];
 
     const results = await post.aggregate(pipeline).toArray();
 
-    console.log(results);
+    // console.log(results);
     
     // Hitung total data (tanpa $skip dan $limit)
     const totalData = await post.countDocuments({
@@ -276,8 +316,8 @@ router.post('/viewData', async (req, res, next) => {
     });
 
     res.status(200).json({
-      currentPage: page,
-      totalPage: Math.ceil(totalData / limit),
+      // currentPage: page,
+      // totalPage: Math.ceil(totalData / limit),
       totalData,
       data: results
     });
@@ -286,6 +326,8 @@ router.post('/viewData', async (req, res, next) => {
     res.status(500).json({ message: 'Gagal mengambil data' });
   }
 })
+
+
 
 
 async function simpanfile(datafile, idLaporan) {
@@ -1142,6 +1184,8 @@ router.post('/likePost', async (req, res) => {
     });
   }
 });
+
+
 
 
 
