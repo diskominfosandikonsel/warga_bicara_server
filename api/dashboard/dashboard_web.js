@@ -529,10 +529,10 @@ router.post('/total_laporan', async (req, res) => {
     return res.status(200).json({
       success: true,
       user_info: {
-        role_id: user_role_id,
+        // role_id: user_role_id,
         role_name: roleData.uraian,
-        is_administrator: isAdministrator,
-        is_admin_opd: isAdminOPD
+        // is_administrator: isAdministrator,
+        // is_admin_opd: isAdminOPD
       },
       data: {
         total_laporan,
@@ -552,6 +552,114 @@ router.post('/total_laporan', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Gagal mengambil data laporan totals"
+    });
+  }
+});
+
+router.post('/trending_topics_detail', async (req, res) => {
+  try {
+    const post = await getCollection('post');
+    // const master_kategori = await getCollection('master_kategori_laporan');
+    // const master_sub_kategori = await getCollection('master_kategori_laporan_sub');
+    
+    const { limit_days = 30, top_n = 10 } = req.body || {};
+
+    // ====== HITUNG POSTINGAN DARI N HARI TERAKHIR ======
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - limit_days);
+
+    const filter = {
+      created_at: { $gte: startDate },
+      status: 6
+    };
+
+    // ====== AGREGASI BERDASARKAN KATEGORI DAN SUB-KATEGORI ======
+    const trendingData = await post.aggregate([
+      {
+        $match: filter
+      },
+      {
+        $lookup: {
+          from: 'master_kategori_laporan',
+          localField: 'master_kategori_id',
+          foreignField: 'id',
+          as: 'kategori_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$kategori_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'master_kategori_laporan_sub',
+          localField: 'master_sub_kategori_id',
+          foreignField: 'id',
+          as: 'sub_kategori_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$sub_kategori_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: {
+            kategori_id: '$master_kategori_id',
+            kategori_name: '$kategori_info.uraian',
+            sub_kategori_id: '$master_sub_kategori_id',
+            sub_kategori_name: '$sub_kategori_info.uraian'
+          },
+          total_posts: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { total_posts: -1 }
+      },
+      {
+        $limit: top_n
+      },
+      {
+        $project: {
+          _id: 0,
+          kategori_id: '$_id.kategori_id',
+          kategori_name: '$_id.kategori_name',
+          sub_kategori_id: '$_id.sub_kategori_id',
+          sub_kategori_name: '$_id.sub_kategori_name',
+          total_posts: 1
+        }
+      }
+    ]).toArray();
+
+    // ====== HITUNG TOTAL DAN PERSENTASE ======
+    const total_all_posts = await post.countDocuments(filter);
+    const trendingWithPercentage = trendingData.map(item => ({
+      ...item,
+      percentage: total_all_posts > 0 ? Math.round((item.total_posts / total_all_posts) * 100) : 0
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data_trending: 'Per ' + limit_days + ' Hari',
+      metadata: {
+        period_days: limit_days,
+        total_posts: total_all_posts,
+        top_n_categories: top_n,
+        start_date: startDate,
+        end_date: new Date()
+      },
+      data: trendingWithPercentage
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data trending topics detail"
     });
   }
 });
