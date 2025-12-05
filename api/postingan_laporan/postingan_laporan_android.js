@@ -192,6 +192,8 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
+      
+
       // Update lookup post_keterangan dengan join ke users untuk info admin
       {
         $lookup: {
@@ -874,6 +876,7 @@ router.post('/get_post_keterangan_history', async (req, res, next) => {
   }
 });
 
+
 router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   try {
 
@@ -970,6 +973,113 @@ router.post('/addComment', async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Terjadi kesalahan server" });
+  }
+});
+router.post('/viewComment', async (req, res, next) => {
+  try {
+    const { post_id } = req.body;
+    
+    if (!post_id) {
+      return res.status(400).json({ 
+        message: 'post_id wajib dikirim' 
+      });
+    }
+
+    const comments = await getCollection('comments');
+    
+    const pipeline = [
+      {
+        $match: {
+          post_id: post_id,
+          parent_id: null  // Ambil hanya komentar utama (bukan reply)
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$user_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          user_name: {
+            $cond: [
+              '$anonymous',
+              'Anonim',
+              '$user_info.nama'
+            ]
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'comments',
+          let: { commentId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$parent_id', '$$commentId'] }
+              }
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user_id',
+                foreignField: 'id',
+                as: 'reply_user'
+              }
+            },
+            {
+              $unwind: {
+                path: '$reply_user',
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            {
+              $addFields: {
+                user_name: {
+                  $cond: [
+                    '$anonymous',
+                    'Anonim',
+                    '$reply_user.nama'
+                  ]
+                }
+              }
+            },
+            {
+              $sort: { created_at: 1 }
+            }
+          ],
+          as: 'replies'
+        }
+      },
+      {
+        $sort: { created_at: -1 }
+      }
+    ];
+
+    const results = await comments.aggregate(pipeline).toArray();
+    
+    res.status(200).json({
+      success: true,
+      data: results,
+      total: results.length
+    });
+
+  } catch (error) {
+    console.error('Gagal mengambil comments:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Gagal mengambil comments' 
+    });
   }
 });
 
