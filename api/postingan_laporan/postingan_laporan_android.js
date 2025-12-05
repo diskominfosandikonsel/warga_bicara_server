@@ -372,7 +372,8 @@ router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (r
     data.publish      = false
     data.finalisasi   = false
     data.created_at   = new Date()
-    data.user_id      = req.user.id 
+    data.user_id      = req.user.id
+    data.anonymous    = data.anonymous
 
     try {
         const uploadedFiles = req.files['file']; 
