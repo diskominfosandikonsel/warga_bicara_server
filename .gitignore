@@ -141,3 +141,7 @@ dump.rdb
 # Direkstories
 uploads/.DS_Store
 **/.DS_Store
+
+# Ignore dummy_json folder dan semua isinya
+dummy_json/
+dummy_json/**

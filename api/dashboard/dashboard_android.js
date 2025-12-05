@@ -60,12 +60,21 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
-            {
+      {
         $lookup: {
           from: 'rating',
           localField: 'id',
           foreignField: 'post_id',
           as: 'rating'
+        }
+      },
+
+    {
+        $lookup: {
+          from: 'tindak_lanjut_laporan',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'tindak_lanjut_laporan'
         }
       },
 
@@ -144,12 +153,12 @@ router.post('/viewData', async (req, res, next) => {
       {
         $sort: { createdAt: -1 }
       },
-      {
-        $skip: (page - 1) * limit
-      },
-      {
-        $limit: limit
-      }
+      // {
+      //   $skip: (page - 1) * limit
+      // },
+      // {
+      //   $limit: limit
+      // }
     ];
 
     const results = await post.aggregate(pipeline).toArray();
@@ -163,8 +172,8 @@ router.post('/viewData', async (req, res, next) => {
     });
 
     res.status(200).json({
-      currentPage: page,
-      totalPage: Math.ceil(totalData / limit),
+      // currentPage: page,
+      // totalPage: Math.ceil(totalData / limit),
       totalData,
       data: results
     });
