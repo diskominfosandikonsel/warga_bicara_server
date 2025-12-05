@@ -425,12 +425,28 @@ router.post('/sebaranAduan', async (req, res, next) => {
 })
 
 // ================================================================
+
+
+
 router.post('/total_laporan', async (req, res) => {
   try {
     const post = await getCollection('post');
+    const post_handle = await getCollection('post_handle');
+    const menu_klp = await getCollection('menu_klp');
+    
+    const { start_date, end_date, kategori_id } = req.body || {};
+    const user_id = req.user.id;
+    const user_role_id = req.user.auth.authorization; // ID role dari JWT payload
 
-    // Ambil data filter dari body
-    const { start_date, end_date, status, kategori_id } = req.body || {};
+    // ====== CEK ROLE USER DARI COLLECTION menu_klp ======
+    const roleData = await menu_klp.findOne({ id: user_role_id });
+    
+    if (!roleData) {
+      return res.status(401).json({
+        success: false,
+        message: "Role user tidak ditemukan"
+      });
+    }
 
     const filter = {};
 
@@ -442,43 +458,100 @@ router.post('/total_laporan', async (req, res) => {
       };
     }
 
-    // Filter status jika dikirim
-    if (status) {
-      filter.status = status;
-    }
-
     // Filter kategori jika dikirim
     if (kategori_id) {
       filter.master_kategori_id = kategori_id;
     }
 
-    // ====== Hitung total keseluruhan ======
+    // ====== CEK ROLE BERDASARKAN URAIAN ======
+    // Asumsikan uraian yang mengidentifikasi Administrator adalah "Administrator" atau "Admin OPD"
+    const isAdministrator = roleData.uraian === "Administrator" || roleData.uraian === "Admin Pusat";
+    const isAdminOPD = roleData.uraian === "Admin OPD";
+
+    if (isAdminOPD) {
+      // Ambil post_id dari post_handle berdasarkan unit kerja user
+      const user_unit_kerja = req.user.auth.master_unit_kerja_id;
+      
+      const post_handles = await post_handle.find({
+        master_unit_kerja_id: user_unit_kerja
+      }).toArray();
+
+      const post_ids = post_handles.map(ph => ph.post_id);
+
+      if (post_ids.length === 0) {
+        // Jika tidak ada post yang di-handle, return 0 untuk semua
+        return res.status(200).json({
+          success: true,
+          user_info: {
+            role_id: user_role_id,
+            role_name: roleData.uraian,
+            unit_kerja: user_unit_kerja
+          },
+          data: {
+            total_laporan: 0,
+            total_diproses: 0,
+            total_ditolak: 0,
+            total_selesai: 0,
+            persentase: {
+              diproses: 0,
+              ditolak: 0,
+              selesai: 0
+            }
+          }
+        });
+      }
+
+      filter.id = { $in: post_ids };
+    }
+    // Jika role = Administrator, tidak perlu filter unit kerja, lihat semua
+
+    // ====== Total Laporan Keseluruhan ======
     const total_laporan = await post.countDocuments(filter);
 
-    // ====== Hitung total per status ======
-    const total_per_status = await post.aggregate([
-      { $match: filter },
-      { $group: { _id: "$status", jumlah: { $sum: 1 } } }
-    ]).toArray();
+    // ====== Total Laporan Diproses (Status 1-5) ======
+    const total_diproses = await post.countDocuments({
+      ...filter,
+      status: { $in: [1, 2, 4, 5] }
+    });
 
-    // ====== Hitung total per kategori ======
-    const total_per_kategori = await post.aggregate([
-      { $match: filter },
-      { $group: { _id: "$master_kategori_id", jumlah: { $sum: 1 } } }
-    ]).toArray();
+    // ====== Total Laporan Ditolak (Status 0) ======
+    const total_ditolak = await post.countDocuments({
+      ...filter,
+      status: { $in: [3, 7] }
+    });
 
-    return res.json({
+    // ====== Total Laporan Selesai (Status 6) ======
+    const total_selesai = await post.countDocuments({
+      ...filter,
+      status: 6
+    });
+
+    return res.status(200).json({
       success: true,
-      total_laporan,
-      total_per_status,
-      total_per_kategori
+      user_info: {
+        role_id: user_role_id,
+        role_name: roleData.uraian,
+        is_administrator: isAdministrator,
+        is_admin_opd: isAdminOPD
+      },
+      data: {
+        total_laporan,
+        total_diproses,
+        total_ditolak,
+        total_selesai,
+        persentase: {
+          diproses: total_laporan > 0 ? Math.round((total_diproses / total_laporan) * 100) : 0,
+          ditolak: total_laporan > 0 ? Math.round((total_ditolak / total_laporan) * 100) : 0,
+          selesai: total_laporan > 0 ? Math.round((total_selesai / total_laporan) * 100) : 0
+        }
+      }
     });
 
   } catch (err) {
     console.error(err);
     return res.status(500).json({
       success: false,
-      message: "Gagal menghitung total laporan"
+      message: "Gagal mengambil data laporan totals"
     });
   }
 });
