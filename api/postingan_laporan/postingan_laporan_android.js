@@ -1083,6 +1083,66 @@ router.post('/viewComment', async (req, res, next) => {
   }
 });
 
+router.post('/likePost', async (req, res) => {
+  const { post_id } = req.body;
+  const user_id = req.user.id;
+
+  if (!post_id) {
+    return res.status(400).json({ 
+      message: "post_id wajib dikirim" 
+    });
+  }
+
+  try {
+    const likes = await getCollection('likes');
+
+    // Cek apakah user sudah like post ini sebelumnya
+    const existingLike = await likes.findOne({
+      post_id: post_id,
+      user_id: user_id
+    });
+
+    if (existingLike) {
+      // Jika sudah like, hapus like (unlike)
+      const result = await likes.deleteOne({
+        post_id: post_id,
+        user_id: user_id
+      });
+
+      return res.status(200).json({
+        success: true,
+        action: 'unlike',
+        message: "Like berhasil dihapus"
+      });
+    } else {
+      // Jika belum like, tambahkan like baru
+      const newLike = {
+        _id: new ObjectId(),
+        id: uniqid(),
+        post_id: post_id,
+        user_id: user_id,
+        created_at: new Date()
+      };
+
+      const result = await likes.insertOne(newLike);
+
+      return res.status(200).json({
+        success: true,
+        action: 'like',
+        message: "Like berhasil ditambahkan",
+        data: newLike
+      });
+    }
+
+  } catch (error) {
+    console.error('Error saat melakukan like:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Terjadi kesalahan server" 
+    });
+  }
+});
+
 
 
 module.exports = router
