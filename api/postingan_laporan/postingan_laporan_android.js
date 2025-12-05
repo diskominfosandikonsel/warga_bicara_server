@@ -867,14 +867,22 @@ router.post('/get_post_keterangan_history', async (req, res, next) => {
 
 router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   try {
-    const post = await getCollection('tindak_lanjut_laporan');
 
-    const laporanId = req.body.tabel_id; // ID laporan induk
+    const data = req.body;
+    const post_id = req.body.post_id; // ID laporan induk
+    const filter = {};
+    // if (data.post_id) {
+    //   filter.post_id = data.post_id;
+    // }
+    console.log(data);
+    
+
+    const post = await getCollection('tindak_lanjut_laporan');
 
     const pipeline = [
       {
         $match: {
-          tabel_id: laporanId
+          post_id: post_id
         }
       },
 
@@ -913,7 +921,7 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
     const results = await post.aggregate(pipeline).toArray();
 
     res.status(200).json({
-      tabel_id: laporanId,
+      // tabel_id: post_id,
       total: results.length,
       data: results
     });
@@ -921,6 +929,39 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Gagal mengambil data tindak lanjut + lampiran' });
+  }
+});
+
+
+router.post('/addComment', async (req, res) => {
+  const { post_id, parent_id = null, user_id, comment, anonymous } = req.body;
+
+  if (!post_id || !user_id || !comment) {
+    return res.status(400).json({ message: "post_id, user_id, dan comment wajib dikirim" });
+  }
+
+  try {
+    const comments = await getCollection('comments');
+
+    const newComment = {
+      post_id,
+      parent_id: parent_id || null,
+      user_id,
+      comment,
+      anonymous,
+      created_at: new Date()
+    };
+
+    const result = await comments.insertOne(newComment);
+
+    return res.status(200).json({
+      message: parent_id ? "Reply berhasil ditambahkan" : "Comment berhasil ditambahkan",
+      data: { id: result.insertedId, ...newComment }
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Terjadi kesalahan server" });
   }
 });
 
