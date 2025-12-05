@@ -181,7 +181,16 @@ router.post('/viewData', async (req, res, next) => {
           foreignField: 'post_id',
           as: 'tindak_lanjut_laporan'
         }
-      },      
+      },
+
+      {
+        $lookup: {
+          from: 'rating',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'rating'
+        }
+      },
 
       // Update lookup post_keterangan dengan join ke users untuk info admin
       {
@@ -931,7 +940,6 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
     res.status(500).json({ message: 'Gagal mengambil data tindak lanjut + lampiran' });
   }
 });
-
 
 router.post('/addComment', async (req, res) => {
   const { post_id, parent_id = null, user_id, comment, anonymous } = req.body;
