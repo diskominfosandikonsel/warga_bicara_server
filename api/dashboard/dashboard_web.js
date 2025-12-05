@@ -180,121 +180,121 @@ router.post('/jmlAduan', async (req, res, next) => {
   res.status(200).json({ message: 'Gagal mengambil data jmlAduan' });
 })
 // ✅
-router.post('/popularIssue', async (req, res, next) => { 
+// router.post('/popularIssue', async (req, res, next) => { 
 
-    function getRandomColor() {
-    const letters = '0123456789ABCDEF'
-    let color = '#'
-    for (let i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)]
-    }
-    return color
-    }
+//     function getRandomColor() {
+//     const letters = '0123456789ABCDEF'
+//     let color = '#'
+//     for (let i = 0; i < 6; i++) {
+//         color += letters[Math.floor(Math.random() * 16)]
+//     }
+//     return color
+//     }
 
 
-//   console.log("popularIssue"); 
-//   const post = await getCollection('post');  
-//   res.status(200).json({ message: 'Gagal mengambil data popularIssue' });
+// //   console.log("popularIssue"); 
+// //   const post = await getCollection('post');  
+// //   res.status(200).json({ message: 'Gagal mengambil data popularIssue' });
 
-  try {
-    const post = await getCollection('post')
+//   try {
+//     const post = await getCollection('post')
 
-    const result = await post.aggregate([
-      {
-        $match: {
-        //   publish: true,
-        //   finalisasi: true
-          status: 6
-        }
-      },
-      {
-        $lookup: {
-          from: "master_kategori_laporan_sub",
-          localField: "master_sub_kategori_id",
-          foreignField: "id",
-          as: "subKategori"
-        }
-      },
-      {
-        $unwind: {
-          path: "$subKategori",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $group: {
-          _id: {
-            subkategori: "$subKategori.uraian",
-            month: { $month: "$created_at" }
-          },
-          total: { $sum: 1 }
-        }
-      },
-      {
-        $group: {
-          _id: "$_id.subkategori",
-          monthlyData: {
-            $push: {
-              month: "$_id.month",
-              total: "$total"
-            }
-          }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          name: "$_id",
-          data: {
-            $map: {
-              input: { $range: [1, 13] },
-              as: "m",
-              in: {
-                $let: {
-                  vars: {
-                    found: {
-                      $first: {
-                        $filter: {
-                          input: "$monthlyData",
-                          as: "md",
-                          cond: { $eq: ["$$md.month", "$$m"] }
-                        }
-                      }
-                    }
-                  },
-                  in: { $ifNull: ["$$found.total", 0] }
-                }
-              }
-            }
-          }
-        }
-      }
-    ]).toArray()
+//     const result = await post.aggregate([
+//       {
+//         $match: {
+//         //   publish: true,
+//         //   finalisasi: true
+//           status: 6
+//         }
+//       },
+//       {
+//         $lookup: {
+//           from: "master_kategori_laporan_sub",
+//           localField: "master_sub_kategori_id",
+//           foreignField: "id",
+//           as: "subKategori"
+//         }
+//       },
+//       {
+//         $unwind: {
+//           path: "$subKategori",
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: {
+//             subkategori: "$subKategori.uraian",
+//             month: { $month: "$created_at" }
+//           },
+//           total: { $sum: 1 }
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: "$_id.subkategori",
+//           monthlyData: {
+//             $push: {
+//               month: "$_id.month",
+//               total: "$total"
+//             }
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           name: "$_id",
+//           data: {
+//             $map: {
+//               input: { $range: [1, 13] },
+//               as: "m",
+//               in: {
+//                 $let: {
+//                   vars: {
+//                     found: {
+//                       $first: {
+//                         $filter: {
+//                           input: "$monthlyData",
+//                           as: "md",
+//                           cond: { $eq: ["$$md.month", "$$m"] }
+//                         }
+//                       }
+//                     }
+//                   },
+//                   in: { $ifNull: ["$$found.total", 0] }
+//                 }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     ]).toArray()
 
-    // Warna tetap (bisa diubah sesuai kebutuhan)
-    const colorMap = {
-      "Jalan Rusak": "#9B59B6",
-      "Banjir": "#E74C3C",
-      "Sampah": "#2ECC71"
-    }
+//     // Warna tetap (bisa diubah sesuai kebutuhan)
+//     const colorMap = {
+//       "Jalan Rusak": "#9B59B6",
+//       "Banjir": "#E74C3C",
+//       "Sampah": "#2ECC71"
+//     }
 
-    // Bentuk hasil untuk chart (Highcharts / ApexCharts)
-    const series = result.map(r => ({
-      type: 'line',
-      name: r.name || 'Lainnya',
-      data: r.data,
-    //   color: colorMap[r.name] || '#3498DB'
-      color: getRandomColor()
-    }))
+//     // Bentuk hasil untuk chart (Highcharts / ApexCharts)
+//     const series = result.map(r => ({
+//       type: 'line',
+//       name: r.name || 'Lainnya',
+//       data: r.data,
+//     //   color: colorMap[r.name] || '#3498DB'
+//       color: getRandomColor()
+//     }))
 
-    res.status(200).json({ series })
+//     res.status(200).json({ series })
 
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Terjadi kesalahan pada server.' })
-  }
+//   } catch (error) {
+//     console.error(error)
+//     res.status(500).json({ error: 'Terjadi kesalahan pada server.' })
+//   }
 
-})
+// })
 
 
 router.post('/demografiPenggunaAplikasiUmur', async (req, res, next) => { 
@@ -414,10 +414,10 @@ router.post('/demografiPengguna', async (req, res, next) => {
   res.status(200).json({ message: 'Gagal mengambil data demografiPengguna' });
 })
 
-router.post('/kinerjaOPD', async (req, res, next) => { 
-  console.log("kinerjaOPD"); 
-  res.status(200).json({ message: 'Gagal mengambil data kinerjaOPD' });
-})
+// router.post('/kinerjaOPD', async (req, res, next) => { 
+//   console.log("kinerjaOPD"); 
+//   res.status(200).json({ message: 'Gagal mengambil data kinerjaOPD' });
+// })
 
 router.post('/sebaranAduan', async (req, res, next) => { 
   console.log("sebaranAduan"); 
@@ -663,5 +663,462 @@ router.post('/trending_topics_detail', async (req, res) => {
     });
   }
 });
+
+router.post('/kinerjaOPDx', async (req, res, next) => { 
+  try {
+    const post = await getCollection('post');
+    const post_handle = await getCollection('post_handle');
+    const unit_kerja = await getCollection('unit_kerja');
+    
+    const { start_date, end_date, unit_kerja_filter } = req.body || {};
+
+    // ====== FILTER TANGGAL ======
+    const dateFilter = {};
+    if (start_date && end_date) {
+      dateFilter.created_at = {
+        $gte: new Date(start_date),
+        $lte: new Date(end_date + "T23:59:59")
+      };
+    }
+
+    // ====== FILTER UNIT KERJA - DEFAULT KATEGORI TERTENTU ======
+    let unitKerjaQuery = {};
+    
+    if (unit_kerja_filter) {
+      // Jika ada filter, gunakan regex search
+      unitKerjaQuery = {
+        unit_kerja: { $regex: unit_kerja_filter, $options: 'i' }
+      };
+    } else {
+      // Default: tampilkan unit kerja dengan kategori: Sekretariat, Badan, Dinas, Satuan
+      unitKerjaQuery = {
+        $or: [
+          { unit_kerja: { $regex: 'Sekretariat', $options: 'i' } },
+          { unit_kerja: { $regex: 'Badan', $options: 'i' } },
+          { unit_kerja: { $regex: 'Dinas', $options: 'i' } },
+          { unit_kerja: { $regex: 'Satuan', $options: 'i' } }
+        ]
+      };
+    }
+
+    // ====== AMBIL SEMUA UNIT KERJA SESUAI FILTER ======
+    const allUnitKerja = await unit_kerja.find(unitKerjaQuery).toArray();
+
+    if (allUnitKerja.length === 0) {
+      return res.status(200).json({
+        success: true,
+        metadata: {
+          total_opd: 0,
+          filter_applied: unit_kerja_filter || 'Default (Sekretariat, Badan, Dinas, Satuan)',
+          period: {
+            start_date: start_date || 'Semua waktu',
+            end_date: end_date || 'Semua waktu'
+          }
+        },
+        data: []
+      });
+    }
+
+    // ====== AMBIL ID UNIT KERJA ======
+    const unitKerjaIds = allUnitKerja.map(uk => uk.id);
+
+    // ====== AMBIL DATA KINERJA PER UNIT KERJA ======
+    const detailKinerja = await post_handle.aggregate([
+      {
+        $match: {
+          master_unit_kerja_id: { $in: unitKerjaIds }
+        }
+      },
+      {
+        $lookup: {
+          from: 'post',
+          localField: 'post_id',
+          foreignField: 'id',
+          as: 'post_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$post_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: dateFilter.created_at ? {
+          'post_info.created_at': dateFilter.created_at
+        } : {}
+      },
+      {
+        $group: {
+          _id: '$master_unit_kerja_id',
+          total_posts: { $sum: 1 },
+          diproses: {
+            $sum: {
+              $cond: [
+                { $in: ['$post_info.status', [1, 2, 4, 5]] },
+                1,
+                0
+              ]
+            }
+          },
+          ditolak: {
+            $sum: {
+              $cond: [
+                { $in: ['$post_info.status', [3, 7]] },
+                1,
+                0
+              ]
+            }
+          },
+          selesai: {
+            $sum: {
+              $cond: [
+                { $eq: ['$post_info.status', 6] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          total_posts: 1,
+          diproses: 1,
+          ditolak: 1,
+          selesai: 1,
+          persentase: {
+            diproses: {
+              $cond: [
+                { $gt: ['$total_posts', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$diproses', '$total_posts'] }, 100] }, 2] },
+                0
+              ]
+            },
+            ditolak: {
+              $cond: [
+                { $gt: ['$total_posts', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$ditolak', '$total_posts'] }, 100] }, 2] },
+                0
+              ]
+            },
+            selesai: {
+              $cond: [
+                { $gt: ['$total_posts', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$selesai', '$total_posts'] }, 100] }, 2] },
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]).toArray();
+
+    // ====== BUAT MAP DARI DATA KINERJA ======
+    const kinerjaMap = {};
+    detailKinerja.forEach(item => {
+      kinerjaMap[item._id] = item;
+    });
+
+    // ====== GABUNGKAN: SEMUA UNIT KERJA + DATA KINERJA ======
+    const completeKinerjaData = allUnitKerja.map(uk => {
+      const kinerja = kinerjaMap[uk.id];
+      if (kinerja) {
+        return {
+          unit_kerja_id: uk.id,
+          unit_kerja_name: uk.unit_kerja,
+          total_posts: kinerja.total_posts,
+          diproses: kinerja.diproses,
+          ditolak: kinerja.ditolak,
+          selesai: kinerja.selesai,
+          persentase: kinerja.persentase
+        };
+      } else {
+        return {
+          unit_kerja_id: uk.id,
+          unit_kerja_name: uk.unit_kerja,
+          total_posts: 0,
+          diproses: 0,
+          ditolak: 0,
+          selesai: 0,
+          persentase: {
+            diproses: 0,
+            ditolak: 0,
+            selesai: 0
+          }
+        };
+      }
+    });
+
+    // ====== SORT BERDASARKAN TOTAL POSTS (DESCENDING) ======
+    completeKinerjaData.sort((a, b) => b.total_posts - a.total_posts);
+
+    return res.status(200).json({
+      success: true,
+      metadata: {
+        total_opd: completeKinerjaData.length,
+        filter_applied: unit_kerja_filter || 'Default (Sekretariat, Badan, Dinas, Satuan)',
+        period: {
+          start_date: start_date || 'Semua waktu',
+          end_date: end_date || 'Semua waktu'
+        }
+      },
+      data: completeKinerjaData
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data kinerja OPD"
+    });
+  }
+})
+
+router.post('/kinerjaOPD', async (req, res, next) => { 
+  try {
+    const post = await getCollection('post');
+    const post_handle = await getCollection('post_handle');
+    const unit_kerja = await getCollection('unit_kerja');
+    const menu_klp = await getCollection('menu_klp');
+    
+    const { start_date, end_date, unit_kerja_filter } = req.body || {};
+    const user_id = req.user.id;
+    const user_role_id = req.user.auth.authorization; // ID role dari JWT payload
+
+    // ====== CEK ROLE USER DARI COLLECTION menu_klp ======
+    const roleData = await menu_klp.findOne({ id: user_role_id });
+    
+    if (!roleData) {
+      return res.status(401).json({
+        success: false,
+        message: "Role user tidak ditemukan"
+      });
+    }
+
+    // ====== CEK ROLE BERDASARKAN URAIAN ======
+    const isAdministrator = roleData.uraian === "Administrator" || roleData.uraian === "Admin Pusat";
+    const isAdminOPD = roleData.uraian === "Admin OPD";
+
+    // ====== FILTER TANGGAL ======
+    const dateFilter = {};
+    if (start_date && end_date) {
+      dateFilter.created_at = {
+        $gte: new Date(start_date),
+        $lte: new Date(end_date + "T23:59:59")
+      };
+    }
+
+    // ====== FILTER UNIT KERJA ======
+    let unitKerjaQuery = {};
+    
+    if (isAdminOPD) {
+      // Jika Admin OPD, hanya lihat unit kerjanya sendiri
+      const user_unit_kerja = req.user.auth.master_unit_kerja_id;
+      unitKerjaQuery = {
+        id: user_unit_kerja
+      };
+    } else if (unit_kerja_filter) {
+      // Jika Administrator dengan filter, gunakan regex search
+      unitKerjaQuery = {
+        unit_kerja: { $regex: unit_kerja_filter, $options: 'i' }
+      };
+    } else {
+      // Default Administrator: tampilkan unit kerja dengan kategori: Sekretariat, Badan, Dinas, Satuan
+      unitKerjaQuery = {
+        $or: [
+          { unit_kerja: { $regex: 'Sekretariat', $options: 'i' } },
+          { unit_kerja: { $regex: 'Badan', $options: 'i' } },
+          { unit_kerja: { $regex: 'Dinas', $options: 'i' } },
+          { unit_kerja: { $regex: 'Satuan', $options: 'i' } }
+        ]
+      };
+    }
+
+    // ====== AMBIL SEMUA UNIT KERJA SESUAI FILTER ======
+    const allUnitKerja = await unit_kerja.find(unitKerjaQuery).toArray();
+
+    if (allUnitKerja.length === 0) {
+      return res.status(200).json({
+        success: true,
+        user_info: {
+          role_name: roleData.uraian,
+          is_admin_opd: isAdminOPD,
+          unit_kerja: isAdminOPD ? req.user.auth.master_unit_kerja_id : null
+        },
+        metadata: {
+          total_opd: 0,
+          filter_applied: isAdminOPD ? 'Unit kerja Anda' : (unit_kerja_filter || 'Default (Sekretariat, Badan, Dinas, Satuan)'),
+          period: {
+            start_date: start_date || 'Semua waktu',
+            end_date: end_date || 'Semua waktu'
+          }
+        },
+        data: []
+      });
+    }
+
+    // ====== AMBIL ID UNIT KERJA ======
+    const unitKerjaIds = allUnitKerja.map(uk => uk.id);
+
+    // ====== AMBIL DATA KINERJA PER UNIT KERJA ======
+    const detailKinerja = await post_handle.aggregate([
+      {
+        $match: {
+          master_unit_kerja_id: { $in: unitKerjaIds }
+        }
+      },
+      {
+        $lookup: {
+          from: 'post',
+          localField: 'post_id',
+          foreignField: 'id',
+          as: 'post_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$post_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: dateFilter.created_at ? {
+          'post_info.created_at': dateFilter.created_at
+        } : {}
+      },
+      {
+        $group: {
+          _id: '$master_unit_kerja_id',
+          total_posts: { $sum: 1 },
+          diproses: {
+            $sum: {
+              $cond: [
+                { $in: ['$post_info.status', [1, 2, 4, 5]] },
+                1,
+                0
+              ]
+            }
+          },
+          ditolak: {
+            $sum: {
+              $cond: [
+                { $in: ['$post_info.status', [3, 7]] },
+                1,
+                0
+              ]
+            }
+          },
+          selesai: {
+            $sum: {
+              $cond: [
+                { $eq: ['$post_info.status', 6] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          total_posts: 1,
+          diproses: 1,
+          ditolak: 1,
+          selesai: 1,
+          persentase: {
+            diproses: {
+              $cond: [
+                { $gt: ['$total_posts', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$diproses', '$total_posts'] }, 100] }, 2] },
+                0
+              ]
+            },
+            ditolak: {
+              $cond: [
+                { $gt: ['$total_posts', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$ditolak', '$total_posts'] }, 100] }, 2] },
+                0
+              ]
+            },
+            selesai: {
+              $cond: [
+                { $gt: ['$total_posts', 0] },
+                { $round: [{ $multiply: [{ $divide: ['$selesai', '$total_posts'] }, 100] }, 2] },
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]).toArray();
+
+    // ====== BUAT MAP DARI DATA KINERJA ======
+    const kinerjaMap = {};
+    detailKinerja.forEach(item => {
+      kinerjaMap[item._id] = item;
+    });
+
+    // ====== GABUNGKAN: SEMUA UNIT KERJA + DATA KINERJA ======
+    const completeKinerjaData = allUnitKerja.map(uk => {
+      const kinerja = kinerjaMap[uk.id];
+      if (kinerja) {
+        return {
+          unit_kerja_id: uk.id,
+          unit_kerja_name: uk.unit_kerja,
+          total_posts: kinerja.total_posts,
+          diproses: kinerja.diproses,
+          ditolak: kinerja.ditolak,
+          selesai: kinerja.selesai,
+          persentase: kinerja.persentase
+        };
+      } else {
+        return {
+          unit_kerja_id: uk.id,
+          unit_kerja_name: uk.unit_kerja,
+          total_posts: 0,
+          diproses: 0,
+          ditolak: 0,
+          selesai: 0,
+          persentase: {
+            diproses: 0,
+            ditolak: 0,
+            selesai: 0
+          }
+        };
+      }
+    });
+
+    // ====== SORT BERDASARKAN TOTAL POSTS (DESCENDING) ======
+    completeKinerjaData.sort((a, b) => b.total_posts - a.total_posts);
+
+    return res.status(200).json({
+      success: true,
+      user_info: {
+        role_name: roleData.uraian,
+        is_admin_opd: isAdminOPD,
+        unit_kerja: isAdminOPD ? req.user.auth.master_unit_kerja_id : null
+      },
+      metadata: {
+        total_opd: completeKinerjaData.length,
+        filter_applied: isAdminOPD ? 'Unit kerja Anda' : (unit_kerja_filter || 'Default (Sekretariat, Badan, Dinas, Satuan)'),
+        period: {
+          start_date: start_date || 'Semua waktu',
+          end_date: end_date || 'Semua waktu'
+        }
+      },
+      data: completeKinerjaData
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data kinerja OPD"
+    });
+  }
+})
 
 module.exports = router
