@@ -213,7 +213,36 @@ router.post('/viewData', async (req, res, next) => {
         }
       },      
 
-      
+      // === JOIN post_handle + unit_kerja langsung ===
+      {
+        $lookup: {
+          from: "post_handle",
+          let: { pid: "$id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
+            {
+              $lookup: {
+                from: "unit_kerja",
+                localField: "master_unit_kerja_id",
+                foreignField: "id",
+                as: "unit_kerja"
+              }
+            },
+            { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                master_unit_kerja_id: 1,
+                status: 1,
+                "unit_kerja.id": 1,
+                "unit_kerja.unit_kerja": 1
+              }
+            }
+          ],
+          as: "post_handle"
+        }
+      },
 
       // Update lookup post_keterangan dengan join ke users untuk info admin
       {
