@@ -179,122 +179,122 @@ router.post('/jmlAduan', async (req, res, next) => {
   console.log("jmlAduan"); 
   res.status(200).json({ message: 'Gagal mengambil data jmlAduan' });
 })
-// ✅
-// router.post('/popularIssue', async (req, res, next) => { 
+// ✅xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+router.post('/popularIssue', async (req, res, next) => { 
 
-//     function getRandomColor() {
-//     const letters = '0123456789ABCDEF'
-//     let color = '#'
-//     for (let i = 0; i < 6; i++) {
-//         color += letters[Math.floor(Math.random() * 16)]
-//     }
-//     return color
-//     }
+    function getRandomColor() {
+    const letters = '0123456789ABCDEF'
+    let color = '#'
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)]
+    }
+    return color
+    }
 
 
-// //   console.log("popularIssue"); 
-// //   const post = await getCollection('post');  
-// //   res.status(200).json({ message: 'Gagal mengambil data popularIssue' });
+//   console.log("popularIssue"); 
+//   const post = await getCollection('post');  
+//   res.status(200).json({ message: 'Gagal mengambil data popularIssue' });
 
-//   try {
-//     const post = await getCollection('post')
+  try {
+    const post = await getCollection('post')
 
-//     const result = await post.aggregate([
-//       {
-//         $match: {
-//         //   publish: true,
-//         //   finalisasi: true
-//           status: 6
-//         }
-//       },
-//       {
-//         $lookup: {
-//           from: "master_kategori_laporan_sub",
-//           localField: "master_sub_kategori_id",
-//           foreignField: "id",
-//           as: "subKategori"
-//         }
-//       },
-//       {
-//         $unwind: {
-//           path: "$subKategori",
-//           preserveNullAndEmptyArrays: true
-//         }
-//       },
-//       {
-//         $group: {
-//           _id: {
-//             subkategori: "$subKategori.uraian",
-//             month: { $month: "$created_at" }
-//           },
-//           total: { $sum: 1 }
-//         }
-//       },
-//       {
-//         $group: {
-//           _id: "$_id.subkategori",
-//           monthlyData: {
-//             $push: {
-//               month: "$_id.month",
-//               total: "$total"
-//             }
-//           }
-//         }
-//       },
-//       {
-//         $project: {
-//           _id: 0,
-//           name: "$_id",
-//           data: {
-//             $map: {
-//               input: { $range: [1, 13] },
-//               as: "m",
-//               in: {
-//                 $let: {
-//                   vars: {
-//                     found: {
-//                       $first: {
-//                         $filter: {
-//                           input: "$monthlyData",
-//                           as: "md",
-//                           cond: { $eq: ["$$md.month", "$$m"] }
-//                         }
-//                       }
-//                     }
-//                   },
-//                   in: { $ifNull: ["$$found.total", 0] }
-//                 }
-//               }
-//             }
-//           }
-//         }
-//       }
-//     ]).toArray()
+    const result = await post.aggregate([
+      {
+        $match: {
+        //   publish: true,
+        //   finalisasi: true
+          status: 6
+        }
+      },
+      {
+        $lookup: {
+          from: "master_kategori_laporan_sub",
+          localField: "master_sub_kategori_id",
+          foreignField: "id",
+          as: "subKategori"
+        }
+      },
+      {
+        $unwind: {
+          path: "$subKategori",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: {
+            subkategori: "$subKategori.uraian",
+            month: { $month: "$created_at" }
+          },
+          total: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.subkategori",
+          monthlyData: {
+            $push: {
+              month: "$_id.month",
+              total: "$total"
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          name: "$_id",
+          data: {
+            $map: {
+              input: { $range: [1, 13] },
+              as: "m",
+              in: {
+                $let: {
+                  vars: {
+                    found: {
+                      $first: {
+                        $filter: {
+                          input: "$monthlyData",
+                          as: "md",
+                          cond: { $eq: ["$$md.month", "$$m"] }
+                        }
+                      }
+                    }
+                  },
+                  in: { $ifNull: ["$$found.total", 0] }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]).toArray()
 
-//     // Warna tetap (bisa diubah sesuai kebutuhan)
-//     const colorMap = {
-//       "Jalan Rusak": "#9B59B6",
-//       "Banjir": "#E74C3C",
-//       "Sampah": "#2ECC71"
-//     }
+    // Warna tetap (bisa diubah sesuai kebutuhan)
+    const colorMap = {
+      "Jalan Rusak": "#9B59B6",
+      "Banjir": "#E74C3C",
+      "Sampah": "#2ECC71"
+    }
 
-//     // Bentuk hasil untuk chart (Highcharts / ApexCharts)
-//     const series = result.map(r => ({
-//       type: 'line',
-//       name: r.name || 'Lainnya',
-//       data: r.data,
-//     //   color: colorMap[r.name] || '#3498DB'
-//       color: getRandomColor()
-//     }))
+    // Bentuk hasil untuk chart (Highcharts / ApexCharts)
+    const series = result.map(r => ({
+      type: 'line',
+      name: r.name || 'Lainnya',
+      data: r.data,
+    //   color: colorMap[r.name] || '#3498DB'
+      color: getRandomColor()
+    }))
 
-//     res.status(200).json({ series })
+    res.status(200).json({ series })
 
-//   } catch (error) {
-//     console.error(error)
-//     res.status(500).json({ error: 'Terjadi kesalahan pada server.' })
-//   }
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Terjadi kesalahan pada server.' })
+  }
 
-// })
+})
 
 
 router.post('/demografiPenggunaAplikasiUmur', async (req, res, next) => { 
