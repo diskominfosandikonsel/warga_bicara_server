@@ -919,20 +919,120 @@ router.post('/get_post_keterangan_history', async (req, res, next) => {
 });
 
 
+// router.post('/tindak_lanjut_laporan_viewx', async (req, res) => {
+//   try {
+
+//     const data = req.body;
+//     const post_id = req.body.post_id; // ID laporan induk
+//     const filter = {};
+//     // if (data.post_id) {
+//     //   filter.post_id = data.post_id;
+//     // }
+//     console.log(data);
+    
+
+//     const post = await getCollection('tindak_lanjut_laporan');
+
+//     const pipeline = [
+//       {
+//         $match: {
+//           post_id: post_id
+//         }
+//       },
+
+//       // === JOIN KE COLLECTION LAMPIRAN ===
+//       {
+//         $lookup: {
+//           from: "lampiran",
+//           let: { postId: "$id" }, 
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $and: [
+//                     { $eq: ["$tabel", "tindak_lanjut_laporan"] },
+//                     { $eq: ["$tabel_id", "$$postId"] }
+//                   ]
+//                 }
+//               }
+//             },
+//             {
+//               $project: {
+//                 _id: 0,
+//                 file: 1,
+//                 filetype: 1,
+//                 filethumbnail: 1
+//               }
+//             }
+//           ],
+//           as: "lampiran_tindak_lanjut"
+//         }
+//       },
+
+//       { $sort: { created_at: -1 } }
+//     ];
+
+//     const results = await post.aggregate(pipeline).toArray();
+
+//     res.status(200).json({
+//       // tabel_id: post_id,
+//       total: results.length,
+//       data: results
+//     });
+
+//   } catch (error) {
+//     console.error('Error:', error);
+//     res.status(500).json({ message: 'Gagal mengambil data tindak lanjut + lampiran' });
+//   }
+// });
+ 
+
 router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   try {
 
     const data = req.body;
     const post_id = req.body.post_id; // ID laporan induk
     const filter = {};
-    // if (data.post_id) {
-    //   filter.post_id = data.post_id;
-    // }
+    
     console.log(data);
     
 
     const post = await getCollection('tindak_lanjut_laporan');
+    const post_handle = await getCollection('post_handle');
 
+    // ====== AMBIL DATA OPD YANG MENANGANI LAPORAN ======
+    const opdHandler = await post_handle.aggregate([
+      {
+        $match: {
+          post_id: post_id
+        }
+      },
+      {
+        $lookup: {
+          from: 'unit_kerja',
+          localField: 'master_unit_kerja_id',
+          foreignField: 'id',
+          as: 'opd_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$opd_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          master_unit_kerja_id: 1,
+          unit_kerja_name: '$opd_info.unit_kerja',
+          post_id: 1,
+          created_at: 1
+        }
+      }
+    ]).toArray();
+
+    // ====== AMBIL DATA TINDAK LANJUT DENGAN LAMPIRAN ======
     const pipeline = [
       {
         $match: {
@@ -974,10 +1074,15 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
 
     const results = await post.aggregate(pipeline).toArray();
 
+    // ====== TAMBAHKAN OPD_HANDLER KE DALAM DATA ======
+    const resultsWithOpdHandler = results.map(item => ({
+      ...item,
+      opd_handler: opdHandler
+    }));
+
     res.status(200).json({
-      // tabel_id: post_id,
-      total: results.length,
-      data: results
+      total: resultsWithOpdHandler.length,
+      data: resultsWithOpdHandler
     });
 
   } catch (error) {
@@ -985,6 +1090,7 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
     res.status(500).json({ message: 'Gagal mengambil data tindak lanjut + lampiran' });
   }
 });
+
 
 router.post('/addComment', async (req, res) => {
   const { post_id, parent_id = null, user_id, comment, anonymous } = req.body;
