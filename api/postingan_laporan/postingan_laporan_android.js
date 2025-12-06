@@ -1132,6 +1132,7 @@ router.post('/addComment', async (req, res) => {
     const comments = await getCollection('comments');
 
     const newComment = {
+      id: uniqid(),
       post_id,
       parent_id: parent_id || null,
       user_id,
@@ -1152,6 +1153,7 @@ router.post('/addComment', async (req, res) => {
     return res.status(500).json({ message: "Terjadi kesalahan server" });
   }
 });
+
 router.post('/viewComment', async (req, res, next) => {
   try {
     const { post_id } = req.body;
@@ -1256,6 +1258,151 @@ router.post('/viewComment', async (req, res, next) => {
     res.status(500).json({ 
       success: false,
       message: 'Gagal mengambil comments' 
+    });
+  }
+});
+
+router.post('/editComment', async (req, res) => {
+  const { comment_id, comment } = req.body;
+  const user_id = req.user.id;
+
+  if (!comment_id || !comment) {
+    return res.status(400).json({ 
+      message: "comment_id dan comment wajib dikirim" 
+    });
+  }
+
+  try {
+    const comments = await getCollection('comments');
+
+    // ====== CEK APAKAH COMMENT DIMILIKI USER ======
+    const existingComment = await comments.findOne({ 
+      id: comment_id
+    });
+
+    if (!existingComment) {
+      return res.status(404).json({
+        success: false,
+        message: "Komentar tidak ditemukan"
+      });
+    }
+
+    // ====== VALIDASI KEPEMILIKAN ======
+    if (existingComment.user_id !== user_id) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki izin mengubah komentar ini"
+      });
+    }
+
+    // ====== UPDATE KOMENTAR ======
+    const result = await comments.updateOne(
+      { id: comment_id },
+      {
+        $set: {
+          comment: comment,
+          updated_at: new Date()
+        }
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Komentar tidak ditemukan"
+      });
+    }
+
+    if (result.modifiedCount === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Tidak ada perubahan yang dilakukan"
+      });
+    }
+
+    // ====== AMBIL DATA KOMENTAR YANG SUDAH DIUPDATE ======
+    const updatedComment = await comments.findOne({ 
+      id: comment_id
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Komentar berhasil diperbarui",
+      data: updatedComment
+    });
+
+  } catch (error) {
+    console.error('Error saat mengubah komentar:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Terjadi kesalahan server" 
+    });
+  }
+});
+
+router.post('/deleteComment', async (req, res) => {
+  const { comment_id } = req.body;
+  const user_id = req.user.id;
+
+  if (!comment_id) {
+    return res.status(400).json({ 
+      message: "comment_id wajib dikirim" 
+    });
+  }
+
+  try {
+    const comments = await getCollection('comments');
+
+    // ====== CEK APAKAH COMMENT DIMILIKI USER ======
+    const comment = await comments.findOne({ id: comment_id });
+
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        message: "Komentar tidak ditemukan"
+      });
+    }
+
+    // ====== VALIDASI KEPEMILIKAN ======
+    if (comment.user_id !== user_id) {
+      return res.status(403).json({
+        success: false,
+        message: "Anda tidak memiliki izin menghapus komentar ini"
+      });
+    }
+
+    // ====== JIKA KOMENTAR UTAMA, HAPUS SEMUA REPLY-NYA ======
+    if (!comment.parent_id) {
+      // Hapus semua reply dari komentar utama ini
+      await comments.deleteMany({ parent_id: comment_id });
+    }
+
+    // ====== HAPUS KOMENTAR ITU SENDIRI ======
+    const result = await comments.deleteOne({ id: comment_id });
+
+    if (result.deletedCount === 0) {
+      return res.status(500).json({
+        success: false,
+        message: "Gagal menghapus komentar"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: !comment.parent_id ? 
+        "Komentar dan semua balasan berhasil dihapus" : 
+        "Balasan berhasil dihapus",
+      data: {
+        comment_id: comment_id,
+        deleted_at: new Date()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error saat menghapus komentar:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Terjadi kesalahan server" 
     });
   }
 });
