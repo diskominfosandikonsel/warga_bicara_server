@@ -8,8 +8,8 @@ const dbHost = process.env.HOST_DB_MONGO
 
 // const uri = `mongodb://`+dbUsername+`:`+dbPassword+`@localhost:27017/?authMechanism=SCRAM-SHA-1`;
 // const uri = `mongodb+srv://diskominfosandi:Kominfo2018@cluster0.9zdgtpl.mongodb.net/`; 
-// const uri = `mongodb+srv://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk atlas
-const uri = `mongodb://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk local
+const uri = `mongodb+srv://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk atlas
+// const uri = `mongodb://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk local
  
 const dbName = process.env.NAMA_DB_MONGO;
 
@@ -68,8 +68,6 @@ module.exports = { connectDB };
 // };
 // ===============================>
 
-
-// ==================================================================================
 
 // require('dotenv').config();
 // const { MongoClient } = require('mongodb');
