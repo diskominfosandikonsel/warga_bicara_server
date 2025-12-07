@@ -5,31 +5,13 @@ const { MongoClient } = require('mongodb');
 const dbUsername = process.env.USERNAME_DB_MONGO
 const dbPassword = process.env.PASSWORD_DB_MONGO
 const dbHost = process.env.HOST_DB_MONGO
-const dbName = process.env.NAMA_DB_MONGO;
 
 // const uri = `mongodb://`+dbUsername+`:`+dbPassword+`@localhost:27017/?authMechanism=SCRAM-SHA-1`;
 // const uri = `mongodb+srv://diskominfosandi:Kominfo2018@cluster0.9zdgtpl.mongodb.net/`; 
 // const uri = `mongodb+srv://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk atlas
-// const uri = `mongodb://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk local
-
-
-
-let uri;
-
-if (dbHost.includes('mongodb.net') || dbHost.includes('atlas')) {
-  // ====== ATLAS FORMAT ======
-  uri = `mongodb+srv://${dbUsername}:${dbPassword}@${dbHost}`;
-  console.log('🌐 Using MongoDB Atlas URI format');
-} else {
-  // ====== LOCAL FORMAT ======
-  uri = `mongodb://${dbUsername}:${dbPassword}@${dbHost}`;
-  console.log('🏠 Using MongoDB Local URI format');
-}
-
+const uri = `mongodb://`+dbUsername+`:`+dbPassword+`@`+dbHost+``; // untuk local
  
-
-
-
+const dbName = process.env.NAMA_DB_MONGO;
 
 // const client = new MongoClient(uri, {
 //   useNewUrlParser: true,
