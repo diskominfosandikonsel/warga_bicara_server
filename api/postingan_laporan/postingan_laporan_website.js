@@ -634,7 +634,12 @@ router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), a
     const notificationData = await sendNotification(data.id, 2, 'Laporan Diterima ', 'Laporan anda sudah di terima oleh opd', 'Laporan sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
     if (notificationData===false) {
       console.log('gagal mengirim notificationData');
-    }    
+    }
+    
+    var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+    if (simpanKeterangan === false) {
+      console.log('Gagal menyimpan keterangan');
+    }
 
   responQuery(result, req, res, next, "Data berhasil diterima", "Data gagal diterima");
 })
