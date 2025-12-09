@@ -8,7 +8,7 @@ const crypto = require('crypto')
 const { connectRedis } = require('./library/redist/redist');
 
 const app = express()
-const port = 3000
+const port = 5016
 app.use(express.json()); // ⬅️ Ini wajib 
 app.use(volleyball);
 // Connect Redis once on app start
