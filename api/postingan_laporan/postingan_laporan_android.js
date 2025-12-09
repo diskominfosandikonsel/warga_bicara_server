@@ -445,11 +445,12 @@ async function simpanupdateKeterangan(data, idnya, req) {
 
 
 router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  
-
+    console.log("====== addData =======");
+    console.log(req.body);
+    
     var data = JSON.parse(req.body.data); 
 
-    data.id = uniqid()
+    data.id           = uniqid()
     data.status       = 1
     data.publish      = false
     data.finalisasi   = false
@@ -472,6 +473,7 @@ router.post('/addData', upload.fields([{ name: 'file', maxCount: 5 }]), async (r
             if(simpanLokasix===false){
               console.log('Gagal menyimpan lokasi');
             }
+
             var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req);
             if(simpanKeterangan===false){
               console.log('Gagal menyimpan keterangan');

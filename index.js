@@ -28,10 +28,10 @@ const allowedOrigins = [
 //   'https://domain1.com',
 //   'https://domain2.com',
 //   'http://localhost:3000',
-//   '*',
-  'http://localhost:3000',
-  'http://10.0.2.2:3000', // untuk android emu
-  'http://localhost:5173', // untuk client
+  '*',
+  // 'http://localhost:3000',
+  // 'http://10.0.2.2:3000', // untuk android emu
+  // 'http://localhost:5173', // untuk client
 ];
 
 app.use(cors({
