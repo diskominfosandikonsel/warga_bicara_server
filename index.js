@@ -26,12 +26,14 @@ const startRedisListener = require('./library/redist/redisListener'); // import 
 
 const allowedOrigins = [
 //   'https://domain1.com',
-//   'https://domain2.com',
+  'https://server-warga-bicara.konaweselatankab.go.id',
 //   'http://localhost:3000',
-  '*',
-  // 'http://localhost:3000',
-  // 'http://10.0.2.2:3000', // untuk android emu
-  // 'http://localhost:5173', // untuk client
+'http://localhost:3000',
+'http://10.0.2.2:3000', // untuk android emu
+'http://localhost:5173', // untuk client
+'http://10.91.178.2', // untuk client
+'https://warga-bicara.konaweselatankab.go.id', // untuk client
+'*',
 ];
 
 app.use(cors({

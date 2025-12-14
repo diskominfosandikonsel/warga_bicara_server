@@ -1056,4 +1056,525 @@ router.post('/sebaranAduan', async (req, res, next) => {
     });
   }
 })
+
+
+router.post('/total_laporan_by_status', async (req, res) => {
+
+    try {
+    const post = await getCollection('post');
+    // const page = parseInt(req.body.page) || 1;
+    // const limit = 10;
+    const cari = req.body.cari || '';
+
+    const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
+
+    const filter = {};
+    if (cari) {
+      filter.title = { $regex: cari, $options: 'i' };
+    }
+    if (master_kategori_laporan_id) {
+      filter.master_kategori_id = master_kategori_laporan_id;
+    }
+    if (master_kategori_laporan_sub_id) {
+      filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
+    }
+    if (status) {
+      filter.status = parseInt(status);
+    }
+
+ 
+
+    const pipeline = [
+      // Filter judul
+      {
+        // $match: {
+        //   title: { $regex: cari, $options: "i" }
+        // }
+        $match: filter
+      },
+
+      {
+        $lookup: {
+          from: 'master_kategori_laporan',
+          localField: 'master_kategori_id',
+          foreignField: 'id',
+          as: 'kategorix'
+        }
+      },
+      {
+        $lookup: {
+          from: 'master_kategori_laporan_sub',
+          localField: 'master_sub_kategori_id',
+          foreignField: 'id',
+          as: 'sub_kategorix'
+        }
+      },
+
+      // Join master_kategori_laporan → langsung ambil uraian
+      {
+        $lookup: {
+          from: "master_kategori_laporan",
+          let: { mkid: "$master_kategori_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
+            { $project: { _id: 0, uraian: 1 } }
+          ],
+          as: "master_kategori_uraian"
+        }
+      },
+      {
+        $set: {
+          master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] }
+        }
+      },
+
+      // Join master_kategori_laporan_sub → langsung ambil uraian
+      {
+        $lookup: {
+          from: "master_kategori_laporan_sub",
+          let: { skid: "$master_sub_kategori_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
+            { $project: { _id: 0, uraian: 1 } }
+          ],
+          as: "master_sub_kategori_uraian"
+        }
+      },
+      {
+        $set: {
+          master_sub_kategori_uraian: { $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0] }
+        }
+      },
+
+      // Join users → ambil nama
+      {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "id",
+          as: "createdBy"
+        }
+      },
+      {
+        $set: {
+          createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+        }
+      },
+
+      // Join lampiran (langsung filter di pipeline)
+      {
+        $lookup: {
+          from: "lampiran",
+          let: { postId: "$id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$tabel_id", "$$postId"] },
+                    { $eq: ["$tabel", "post"] }
+                  ]
+                }
+              }
+            },
+            { $project: { _id: 0, file: 1, filetype: 1, filethumbnail: 1 } }
+          ],
+          as: "lampiran"
+        }
+      },
+
+      // Join lokasi
+      {
+        $lookup: {
+          from: "post_lokasi",
+          localField: "id",
+          foreignField: "post_id",
+          as: "lokasi"
+        }
+      },
+
+      // Join post_keterangan
+      {
+        $lookup: {
+          from: "post_keterangan",
+          localField: "id",
+          foreignField: "post_id",
+          as: "post_keterangan"
+        }
+      },
+
+      // Join post_handle + unit_kerja langsung
+      {
+        $lookup: {
+          from: "post_handle",
+          let: { pid: "$id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
+            {
+              $lookup: {
+                from: "unit_kerja",
+                localField: "master_unit_kerja_id",
+                foreignField: "id",
+                as: "unit_kerja"
+              }
+            },
+            { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                master_unit_kerja_id: 1,
+                status: 1,
+                "unit_kerja.id": 1,
+                "unit_kerja.unit_kerja": 1
+              }
+            }
+          ],
+          as: "post_handle"
+        }
+      },
+
+      // Sort + paging
+      // { $sort: { created_at: -1 } },
+      // { $skip: (page - 1) * limit },
+      // { $limit: limit }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+
+    // Hitung total data (tanpa $skip dan $limit)
+    const totalData = await post.countDocuments({
+      title: { $regex: cari, $options: 'i' }
+    });
+
+    res.status(200).json({
+      // currentPage: page,
+      // totalPage: Math.ceil(totalData / limit),
+      // totalData,
+      data: results,
+
+    });
+  } catch (error) {
+    console.error('Gagal mengambil data post:', error);
+    res.status(500).json({ message: 'Gagal mengambil data' });
+  }
+
+});
+
+router.post('/trending_topics_detail_post', async (req, res) => {
+  try {
+    const post = await getCollection('post');
+    const post_handle = await getCollection('post_handle');
+    
+    const { 
+      limit_days = 30, 
+      master_kategori_id,  // ✅ Ganti dari sub_kategori_id
+      limit = 10,
+      page = 1
+    } = req.body || {};
+
+    if (!master_kategori_id) {
+      return res.status(400).json({
+        success: false,
+        message: "master_kategori_id wajib dikirim"
+      });
+    }
+
+    // ====== HITUNG POSTINGAN DARI N HARI TERAKHIR ======
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - limit_days);
+
+    const filter = {
+      created_at: { $gte: startDate },
+      status: 6,
+      master_kategori_id: master_kategori_id  // ✅ Filter berdasarkan master_kategori_id
+    };
+
+    // ====== HITUNG TOTAL DATA ======
+    const total_posts = await post.countDocuments(filter);
+
+    // ====== AMBIL DETAIL POST DENGAN PAGINATION ======
+    const detailPosts = await post.aggregate([
+      {
+        $match: filter
+      },
+      // ====== JOIN KATEGORI ======
+      {
+        $lookup: {
+          from: 'master_kategori_laporan',
+          localField: 'master_kategori_id',
+          foreignField: 'id',
+          as: 'kategori_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$kategori_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== JOIN SUB KATEGORI ======
+      {
+        $lookup: {
+          from: 'master_kategori_laporan_sub',
+          localField: 'master_sub_kategori_id',
+          foreignField: 'id',
+          as: 'sub_kategori_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$sub_kategori_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== LEFT JOIN USER (PELAPOR) ======
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$user_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== LEFT JOIN LAMPIRAN POST ======
+      {
+        $lookup: {
+          from: 'lampiran',
+          let: { postId: '$id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$tabel_id', '$$postId'] },
+                    { $eq: ['$tabel', 'post'] }
+                  ]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                file: 1,
+                filetype: 1,
+                filethumbnail: 1,
+                created_at: 1
+              }
+            }
+          ],
+          as: 'lampiran'
+        }
+      },
+      // ====== LEFT JOIN POST_KETERANGAN (STATUS SAMA DENGAN POST) ======
+      {
+        $lookup: {
+          from: 'post_keterangan',
+          let: { postId: '$id', postStatus: '$status' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$post_id', '$$postId'] },
+                    { $eq: ['$status', '$$postStatus'] }
+                  ]
+                }
+              }
+            },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user_id',
+                foreignField: 'id',
+                as: 'admin_info'
+              }
+            },
+            {
+              $unwind: {
+                path: '$admin_info',
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            // ====== LEFT JOIN LAMPIRAN POST_KETERANGAN ======
+            {
+              $lookup: {
+                from: 'lampiran',
+                let: { keteranganId: '$id' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$tabel_id', '$$keteranganId'] },
+                          { $eq: ['$tabel', 'post_keterangan'] }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    $project: {
+                      _id: 0,
+                      id: 1,
+                      file: 1,
+                      filetype: 1,
+                      filethumbnail: 1,
+                      created_at: 1
+                    }
+                  }
+                ],
+                as: 'keterangan_lampiran'
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                post_id: 1,
+                keterangan: 1,
+                status: 1,
+                created_at: 1,
+                user_id: 1,
+                admin_name: '$admin_info.nama',
+                admin_username: '$admin_info.username',
+                keterangan_lampiran: 1,
+                keterangan_lampiran_count: { $size: '$keterangan_lampiran' }
+              }
+            },
+            {
+              $sort: { created_at: -1 }
+            }
+          ],
+          as: 'post_keterangan'
+        }
+      },
+      // ====== LEFT JOIN POST_HANDLE + UNIT_KERJA ======
+      {
+        $lookup: {
+          from: 'post_handle',
+          let: { postId: '$id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$post_id', '$$postId'] }
+              }
+            },
+            {
+              $lookup: {
+                from: 'unit_kerja',
+                localField: 'master_unit_kerja_id',
+                foreignField: 'id',
+                as: 'unit_kerja_info'
+              }
+            },
+            {
+              $unwind: {
+                path: '$unit_kerja_info',
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                master_unit_kerja_id: 1,
+                unit_kerja_name: '$unit_kerja_info.unit_kerja',
+                created_at: 1
+              }
+            }
+          ],
+          as: 'post_handle'
+        }
+      },
+      // ====== LEFT JOIN RATING ======
+      {
+        $lookup: {
+          from: 'rating',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'rating'
+        }
+      },
+      // ====== LEFT JOIN LOKASI ======
+      {
+        $lookup: {
+          from: 'post_lokasi',
+          localField: 'id',
+          foreignField: 'post_id',
+          as: 'lokasi'
+        }
+      },
+      // ====== PROJECT FIELD YANG DIPERLUKAN ======
+      {
+        $project: {
+          _id: 0,
+          id: 1,
+          title: 1,
+          description: 1,
+          status: 1,
+          kategori_name: '$kategori_info.uraian',
+          sub_kategori_name: '$sub_kategori_info.uraian',
+          user_name: '$user_info.nama',
+          user_email: '$user_info.email',
+          user_phone: '$user_info.nomor_hp',
+          created_at: 1,
+          nama_kecamatan: 1,
+          nama_kelurahan: 1,
+          lampiran_count: { $size: '$lampiran' },
+          lampiran: 1,
+          post_keterangan_count: { $size: '$post_keterangan' },
+          post_keterangan: 1,
+          post_handle_count: { $size: '$post_handle' },
+          post_handle: 1,
+          rating_count: { $size: '$rating' },
+          rating: 1,
+          lokasi_count: { $size: '$lokasi' },
+          lokasi: 1
+        }
+      },
+      // ====== SORT DAN PAGINATION ======
+      {
+        $sort: { created_at: -1 }
+      },
+      {
+        $skip: (page - 1) * limit
+      },
+      {
+        $limit: parseInt(limit)
+      }
+    ]).toArray();
+
+    return res.status(200).json({
+      success: true,
+      // metadata: {
+      //   period_days: limit_days,
+      //   master_kategori_id: master_kategori_id,  // ✅ Update field
+      //   total_posts: total_posts,
+      //   current_page: page,
+      //   total_pages: Math.ceil(total_posts / limit),
+      //   limit_per_page: limit,
+      //   start_date: startDate,
+      //   end_date: new Date()
+      // },
+      data: detailPosts
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil detail post trending topics"
+    });
+  }
+});
+
+
+
 module.exports = router
