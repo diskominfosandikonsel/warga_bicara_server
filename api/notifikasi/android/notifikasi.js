@@ -101,6 +101,196 @@ router.post('/readNotif', async (req, res, next) => {
     responQuery(result, req, res, next, "notifikasi berhasil diupdate", "notifikasi gagal diupdate");
 })
 
+router.post('/viewDataNotif', async (req, res, next) => {
+  try {
+    const notifikasi = await getCollection('notifikasi');
+    const post = await getCollection('post');
+    const users = await getCollection('users');
+    
+    const { post_id } = req.body;
+    const user_id = req.user.id;
+
+    // ====== VALIDASI POST_ID ======
+    if (!post_id) {
+      return res.status(400).json({
+        success: false,
+        message: "post_id wajib dikirim"
+      });
+    }
+
+    // ====== CARI POST BERDASARKAN ID ======
+    const postData = await post.findOne({ id: post_id });
+
+    if (!postData) {
+      return res.status(404).json({
+        success: false,
+        message: "Post dengan ID tersebut tidak ditemukan"
+      });
+    }
+
+    // ====== AMBIL NOTIFIKASI BERDASARKAN POST_ID ======
+    const notifikasiData = await notifikasi.aggregate([
+      {
+        $match: {
+          post_id: post_id
+        }
+      },
+      // ====== JOIN DENGAN USER (PENERIMA NOTIF) ======
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: 'id',
+          as: 'user_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$user_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== JOIN DENGAN POST ======
+      {
+        $lookup: {
+          from: 'post',
+          localField: 'post_id',
+          foreignField: 'id',
+          as: 'post_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$post_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== JOIN DENGAN USER PEMBUAT POST ======
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'post_info.user_id',
+          foreignField: 'id',
+          as: 'post_creator'
+        }
+      },
+      {
+        $unwind: {
+          path: '$post_creator',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== JOIN KATEGORI ======
+      {
+        $lookup: {
+          from: 'master_kategori_laporan',
+          localField: 'post_info.master_kategori_id',
+          foreignField: 'id',
+          as: 'kategori_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$kategori_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== JOIN SUB KATEGORI ======
+      {
+        $lookup: {
+          from: 'master_kategori_laporan_sub',
+          localField: 'post_info.master_sub_kategori_id',
+          foreignField: 'id',
+          as: 'sub_kategori_info'
+        }
+      },
+      {
+        $unwind: {
+          path: '$sub_kategori_info',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // ====== PROJECT FIELD YANG DIPERLUKAN ======
+      {
+        $project: {
+          _id: 0,
+          notif_id: '$id',
+          notif_title: '$title',
+          notif_message: '$message',
+          notif_read: '$read',
+          notif_type: '$type',
+          notif_created_at: '$created_at',
+          // ====== USER INFO (PENERIMA NOTIF) ======
+          receiver_user_id: '$user_info.id',
+          receiver_user_name: '$user_info.nama',
+          receiver_user_email: '$user_info.email',
+          receiver_user_phone: '$user_info.nomor_hp',
+          // ====== POST INFO ======
+          post_id: '$post_info.id',
+          post_title: '$post_info.title',
+          post_description: '$post_info.description',
+          post_status: '$post_info.status',
+          post_created_at: '$post_info.created_at',
+          post_kecamatan: '$post_info.nama_kecamatan',
+          post_kelurahan: '$post_info.nama_kelurahan',
+          // ====== POST CREATOR INFO ======
+          creator_user_id: '$post_creator.id',
+          creator_user_name: '$post_creator.nama',
+          creator_user_email: '$post_creator.email',
+          creator_user_phone: '$post_creator.nomor_hp',
+          // ====== KATEGORI INFO ======
+          kategori_name: '$kategori_info.uraian',
+          sub_kategori_name: '$sub_kategori_info.uraian'
+        }
+      },
+      // ====== SORT BERDASARKAN TANGGAL ======
+      {
+        $sort: { notif_created_at: -1 }
+      }
+    ]).toArray();
+
+    // ====== CEK APAKAH ADA NOTIFIKASI ======
+    if (notifikasiData.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Tidak ada notifikasi untuk post ini",
+        post_info: {
+          post_id: postData.id,
+          post_title: postData.title,
+          post_status: postData.status
+        },
+        notifikasi_count: 0,
+        data: []
+      });
+    }
+
+    // ====== HITUNG TOTAL NOTIFIKASI ======
+    const totalNotifikasi = notifikasiData.length;
+    const unreadCount = notifikasiData.filter(n => !n.notif_read).length;
+
+    return res.status(200).json({
+      success: true,
+      post_info: {
+        post_id: postData.id,
+        post_title: postData.title,
+        post_status: postData.status
+      },
+      summary: {
+        total_notifikasi: totalNotifikasi,
+        read_count: totalNotifikasi - unreadCount,
+        unread_count: unreadCount
+      },
+      data: notifikasiData
+    });
+
+  } catch (error) {
+    console.error('Gagal mengambil data notifikasi:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data notifikasi"
+    });
+  }
+});
 
 const responQuery = async (result, req, res, next, successMessage, errorMessage) => {
   try {

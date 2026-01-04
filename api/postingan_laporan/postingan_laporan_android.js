@@ -627,6 +627,13 @@ router.post('/chat_send', async (req, res, next) => {
     data.created_at   = new Date() 
     const chat = await getCollection('chat');
     const result = await chat.insertOne(data);
+
+    const notificationData = await sendNotification(data.post_id, 1, 'Anda memiliki pesan baru ', 'Anda memiliki pesan baru', 'Periksa Chat Anda', data, false)
+    // sendNotification = async (post_id, type, type_notif, title, message, data, read)
+    if (notificationData===false) {
+        console.log('gagal mengirim notificationData');
+    }      
+
     responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");   
 })
 
@@ -949,7 +956,6 @@ router.post('/get_post_keterangan_history', async (req, res, next) => {
   }
 });
 
-
 // router.post('/tindak_lanjut_laporan_viewx', async (req, res) => {
 //   try {
 
@@ -1017,7 +1023,6 @@ router.post('/get_post_keterangan_history', async (req, res, next) => {
 //   }
 // });
  
-
 router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   try {
 
@@ -1122,9 +1127,9 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
   }
 });
 
-
 router.post('/addComment', async (req, res) => {
   const { post_id, parent_id = null, user_id, comment, anonymous } = req.body;
+  const data = req.body;
 
   if (!post_id || !user_id || !comment) {
     return res.status(400).json({ message: "post_id, user_id, dan comment wajib dikirim" });
@@ -1144,6 +1149,8 @@ router.post('/addComment', async (req, res) => {
     };
 
     const result = await comments.insertOne(newComment);
+
+
 
     return res.status(200).json({
       message: parent_id ? "Reply berhasil ditambahkan" : "Comment berhasil ditambahkan",
@@ -1468,6 +1475,46 @@ router.post('/likePost', async (req, res) => {
     });
   }
 });
+
+
+sendNotification = async (post_id, type, type_notif, title, message, data, read) => {
+  
+    console.log('sendNotification called with parameters:');
+    console.log(post_id, type, type_notif, title, message, data, read);
+    
+    const post = await getCollection('post');
+    const findPost = await post.findOne({ id: post_id }) 
+    const hasilcari= findPost 
+    
+
+    try {
+    const datax = {
+                    id          : uniqid(),
+                    post_id     : post_id,
+                    user_id     : hasilcari.user_id,
+                    type        : type,
+                    type_notif  : type_notif,
+                    title       : title,
+                    message     : message,
+                    read        : read,
+                    data        : data,
+                    created_at  : new Date()
+                  }
+      // console.log(datax);
+                  
+      const notifikasi  = await getCollection('notifikasi');
+      const result      = await notifikasi.insertOne(datax);                  
+      console.log('sendNotification data ==> 🚀');
+      console.log(data);
+
+      if(result.acknowledged===true)
+        console.log('sendNotification berhasil'); 
+        return true
+    } catch (error) {
+        console.log('sendNotification error:', error);
+        return false; 
+    } 
+}
 
 
 

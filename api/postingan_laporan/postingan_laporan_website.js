@@ -417,7 +417,7 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
 
 })
 
-router.post('/viewDataOPD', async (req, res, next) => {
+router.post('/viewDataOPDx', async (req, res, next) => {
   try {
     const post = await getCollection('post');
 
@@ -570,6 +570,250 @@ router.post('/viewDataOPD', async (req, res, next) => {
       {
         $match: {
           "post_handle.master_unit_kerja_id": unit_kerja_id
+        }
+      },
+
+      // Sort & Paging
+      { $sort: { created_at: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit }
+    ];
+
+    const results = await post.aggregate(pipeline).toArray();
+
+    // ==========================
+    //  Hitung total data dengan filter YANG SAMA
+    // ==========================
+    const totalData = await post.countDocuments(filter);
+
+    res.status(200).json({
+      currentPage: page,
+      totalPage: Math.ceil(totalData / limit),
+      totalData,
+      data: results,
+      currentUserId: userId
+    });
+  } catch (error) {
+    console.error('Gagal mengambil data post:', error);
+    res.status(500).json({ message: 'Gagal mengambil data' });
+  }
+}); 
+
+router.post('/viewDataOPD', async (req, res, next) => {
+  try {
+    const post = await getCollection('post');
+
+    const page = parseInt(req.body.page) || 1;
+    const limit = 10;
+    const cari = req.body.cari || '';
+    const unit_kerja_id = req.user.auth.master_unit_kerja_id;
+    const userId = req.user.id;
+
+    const laporanId = req.body.tabel_id;
+    const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
+
+    // ==========================
+    //  FILTER DINAMIS
+    // ==========================
+    const filter = {
+      tabel_id: laporanId
+    };
+
+    if (cari) filter.title = { $regex: cari, $options: 'i' };
+    if (master_kategori_laporan_id) filter.master_kategori_id = master_kategori_laporan_id;
+    if (master_kategori_laporan_sub_id) filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
+    if (status) filter.status = parseInt(status);
+
+    // ==========================
+    //  PIPELINE AGGREGATION
+    // ==========================
+    const pipeline = [
+      { $match: filter },
+
+      // Join master_kategori_laporan
+      {
+        $lookup: {
+          from: "master_kategori_laporan",
+          let: { mkid: "$master_kategori_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$id", "$$mkid"] } } },
+            { $project: { _id: 0, uraian: 1 } }
+          ],
+          as: "master_kategori_uraian"
+        }
+      },
+      { $set: { master_kategori_uraian: { $arrayElemAt: ["$master_kategori_uraian.uraian", 0] } } },
+
+      // Join master_kategori_laporan_sub
+      {
+        $lookup: {
+          from: "master_kategori_laporan_sub",
+          let: { skid: "$master_sub_kategori_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$id", "$$skid"] } } },
+            { $project: { _id: 0, uraian: 1 } }
+          ],
+          as: "master_sub_kategori_uraian"
+        }
+      },
+      {
+        $set: {
+          master_sub_kategori_uraian: {
+            $arrayElemAt: ["$master_sub_kategori_uraian.uraian", 0]
+          }
+        }
+      },
+
+      // Join users
+      {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "id",
+          as: "createdBy"
+        }
+      },
+      { $set: { createdBy: { $arrayElemAt: ["$createdBy.nama", 0] } } },
+
+      // Join lampiran
+      {
+        $lookup: {
+          from: "lampiran",
+          let: { postId: "$id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$tabel_id", "$$postId"] },
+                    { $eq: ["$tabel", "post"] }
+                  ]
+                }
+              }
+            },
+            { $project: { _id: 0, file: 1, filetype: 1, filethumbnail: 1 } }
+          ],
+          as: "lampiran"
+        }
+      },
+
+      // Join post_lokasi
+      {
+        $lookup: {
+          from: "post_lokasi",
+          localField: "id",
+          foreignField: "post_id",
+          as: "lokasi"
+        }
+      },
+
+      // Join post_keterangan
+      {
+        $lookup: {
+          from: "post_keterangan",
+          localField: "id",
+          foreignField: "post_id",
+          as: "post_keterangan"
+        }
+      },
+
+      // Join post_handle + unit_kerja
+      {
+        $lookup: {
+          from: "post_handle",
+          let: { pid: "$id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$post_id", "$$pid"] } } },
+            {
+              $lookup: {
+                from: "unit_kerja",
+                localField: "master_unit_kerja_id",
+                foreignField: "id",
+                as: "unit_kerja"
+              }
+            },
+            { $unwind: { path: "$unit_kerja", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                master_unit_kerja_id: 1,
+                status: 1,
+                "unit_kerja.id": 1,
+                "unit_kerja.unit_kerja": 1
+              }
+            }
+          ],
+          as: "post_handle"
+        }
+      },
+
+      // ====== JOIN NOTIFIKASI - FILTER UNREAD ONLY ✅ ======
+      {
+        $lookup: {
+          from: "notifikasi",
+          let: { postId: "$id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { 
+                  $and: [
+                    { $eq: ["$post_id", "$$postId"] },
+                    { $eq: ["$read", false] }  // ✅ HANYA READ = FALSE
+                  ]
+                }
+              }
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "user_id",
+                foreignField: "id",
+                as: "notif_user"
+              }
+            },
+            {
+              $unwind: {
+                path: "$notif_user",
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                id: 1,
+                post_id: 1,
+                user_id: 1,
+                type: 1,
+                type_notif: 1,
+                title: 1,
+                message: 1,
+                read: 1,
+                created_at: 1,
+                notif_user_name: "$notif_user.nama",
+                notif_user_email: "$notif_user.email"
+              }
+            },
+            {
+              $sort: { created_at: -1 }
+            }
+          ],
+          as: "notifikasi"
+        }
+      },
+
+      // Filter untuk Unit Kerja yang sedang login
+      {
+        $match: {
+          "post_handle.master_unit_kerja_id": unit_kerja_id
+        }
+      },
+
+      // ====== ADD NOTIFICATION COUNTS ======
+      {
+        $addFields: {
+          notifikasi_count: { $size: "$notifikasi" },
+          notifikasi_unread_count: { $size: "$notifikasi" }  // ✅ Semua unread (karena filter di atas)
         }
       },
 
@@ -987,6 +1231,55 @@ router.post('/tindak_lanjut_laporan_hapus', async (req, res, next) => {
     res.status(500).json({ message: 'Gagal menghapus lampiran' });
   }
 
+});
+
+
+// ====== UPDATE NOTIFIKASI STATUS READ BY POST_ID ======
+router.post('/bacaNotifikasi', async (req, res, next) => {
+  try {
+    const { post_id } = req.body;
+
+    // ====== VALIDASI POST_ID ======
+    if (!post_id) {
+      return res.status(400).json({
+        success: false,
+        message: "post_id wajib dikirim"
+      });
+    }
+
+    const notifikasi = await getCollection('notifikasi');
+
+    // ====== UPDATE SEMUA NOTIFIKASI DENGAN POST_ID YANG SAMA ======
+    const result = await notifikasi.updateMany(
+      { post_id: post_id },  // Filter: cari notifikasi dengan post_id tertentu
+      { $set: { read: true } }  // Update: set read menjadi true
+    );
+
+    // ====== CEK HASIL UPDATE ======
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Tidak ada notifikasi untuk post ini"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Notifikasi berhasil ditandai sebagai dibaca",
+      data: {
+        post_id: post_id,
+        matched_count: result.matchedCount,  // Jumlah notifikasi ditemukan
+        modified_count: result.modifiedCount  // Jumlah notifikasi yang diupdate
+      }
+    });
+
+  } catch (error) {
+    console.error('Gagal update notifikasi:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengupdate notifikasi'
+    });
+  }
 });
 
 
