@@ -142,8 +142,8 @@ function respondError422(res, next, text) {
 
 router.post('/login', async (req, res, next) => { 
     const db = await getCollection('durationSecretKey');
-    const row = await db.findOne({})
-    global.secretDuration = row.duration
+    const row = await db.findOne({});
+    if (row && row.duration) global.secretDuration = row.duration;
 
 
   const request = {
@@ -212,15 +212,17 @@ router.post('/login', async (req, res, next) => {
                         console.log("bcrypt");
     
                         if (result) {
+                                        // Durasi khusus 3 Hari (3 * 24 * 60 * 60 detik) untuk Client Mobile
+                                        const clientMobileDurationSeconds = 3 * 24 * 60 * 60;
                                         jwt.sign(payload, process.env.TOKEN_SECRET, {
-                                            expiresIn: global.secretDuration * 60
+                                            expiresIn: clientMobileDurationSeconds
                                         }, async (err, token) => {
                                             if (err) {
                                                 respondError422(res, next, "Kesalahan dlm pembuatan token");
                                             } else {
     
                                                 await connectRedis();
-                                                await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: global.secretDuration * 60 });
+                                                await redisClient.set(`whitelist:${token}`, JSON.stringify({username: user.username, device:req.body.devices}), { EX: clientMobileDurationSeconds });
                                             
                                                 res.json({
                                                     token : token,

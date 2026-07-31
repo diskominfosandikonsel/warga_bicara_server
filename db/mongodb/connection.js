@@ -138,8 +138,8 @@ const EventEmitter = require('events');
 
 const dbUsername = process.env.USERNAME_DB_MONGO;
 const dbPassword = process.env.PASSWORD_DB_MONGO;
-const dbHost = process.env.HOST_DB_MONGO;
-const dbName = process.env.NAMA_DB_MONGO;
+const dbHost = process.env.HOST_DB_MONGO || 'localhost:27017';
+const dbName = process.env.NAMA_DB_MONGO || 'warga_bicara';
 
 // ====== AUTO DETECT URI FORMAT ======
 let uri;
@@ -147,9 +147,12 @@ let uri;
 if (dbHost.includes('mongodb.net') || dbHost.includes('atlas')) {
   uri = `mongodb+srv://${dbUsername}:${dbPassword}@${dbHost}`;
   console.log('🌐 Using MongoDB Atlas URI format');
-} else {
+} else if (dbUsername && dbPassword) {
   uri = `mongodb://${dbUsername}:${dbPassword}@${dbHost}`;
-  console.log('🏠 Using MongoDB Local URI format');
+  console.log('🏠 Using MongoDB Local Authenticated URI format');
+} else {
+  uri = `mongodb://${dbHost}`;
+  console.log('🏠 Using MongoDB Local Direct URI format');
 }
 
 let client;

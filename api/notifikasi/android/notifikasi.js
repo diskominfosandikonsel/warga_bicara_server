@@ -22,36 +22,21 @@ router.post('/viewData', async (req, res, next) => {
 
     // const { master_kategori_laporan_id, master_kategori_laporan_sub_id, status } = req.body;
 
+    const userIdRaw = req.user?.id || req.user?._id;
     const filter = {};
-
-    filter.user_id = req.user.id;
-
-    // if (cari) {
-    //   filter.title = { $regex: cari, $options: 'i' };
-    // }
-    // if (master_kategori_laporan_id) {
-    //   filter.master_kategori_id = master_kategori_laporan_id;
-    // }
-    // if (master_kategori_laporan_sub_id) {
-    //   filter.master_sub_kategori_id = master_kategori_laporan_sub_id;
-    // }
-    // if (status) {
-    //   filter.status = parseInt(status);
-    // }
-
-    // console.log('Filter yang digunakan:', filter);
-     
+    if (userIdRaw) {
+      const numId = Number(userIdRaw);
+      filter.$or = [
+        { user_id: userIdRaw },
+        { user_id: String(userIdRaw) },
+        ...(!isNaN(numId) ? [{ user_id: numId }] : [])
+      ];
+    }
 
     const pipeline = [
-      // Filter judul
       {
-        // $match: {
-        //   title: { $regex: cari, $options: "i" }
-        // }
         $match: filter
       },
-      
-
       {
         $lookup: {
           from: 'post',
@@ -59,9 +44,7 @@ router.post('/viewData', async (req, res, next) => {
           foreignField: 'id',
           as: 'post'
         }
-      },      
-      
-
+      },
       // Sort + paging
       { $sort: { created_at: -1 } },
       { $skip: (page - 1) * limit },
@@ -71,9 +54,7 @@ router.post('/viewData', async (req, res, next) => {
     const results = await post.aggregate(pipeline).toArray();
 
     // Hitung total data (tanpa $skip dan $limit)
-    const totalData = await post.countDocuments({
-      title: { $regex: cari, $options: 'i' }
-    });
+    const totalData = await post.countDocuments(filter);
 
     res.status(200).json({
       currentPage: page,
@@ -91,22 +72,87 @@ router.post('/viewData', async (req, res, next) => {
 
 
 router.post('/readNotif', async (req, res, next) => {
-    const data = req.body; 
+  try {
+    const data = req.body;
     const notifikasi = await getCollection('notifikasi');
-    const result = await notifikasi.updateOne({ id :data.id }, 
-        { $set: { 
-                    read         : true
-                }
-        }) 
-    responQuery(result, req, res, next, "notifikasi berhasil diupdate", "notifikasi gagal diupdate");
+    const conditions = [];
+
+    if (data.post_id) {
+      const pidStr = String(data.post_id);
+      const pidNum = Number(data.post_id);
+      conditions.push({ post_id: pidStr });
+      if (!isNaN(pidNum)) conditions.push({ post_id: pidNum });
+    }
+
+    if (data.id) {
+      conditions.push({ id: data.id });
+      conditions.push({ id: String(data.id) });
+    }
+
+    if (conditions.length === 0) {
+      return res.status(400).json({ success: false, message: 'id atau post_id wajib dikirim' });
+    }
+
+    const filter = conditions.length === 1 ? conditions[0] : { $or: conditions };
+    const result = await notifikasi.updateMany(filter, { $set: { read: true } });
+    return res.status(200).json({
+      success: true,
+      message: 'Notifikasi berhasil di-update',
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.error('Error updating readNotif:', err);
+    return res.status(500).json({ success: false, message: 'Gagal update notifikasi' });
+  }
 })
+
+router.post('/saveFcmToken', async (req, res) => {
+  try {
+    const { fcm_token } = req.body;
+    const user_id = req.user?.id;
+
+    if (!fcm_token) {
+      return res.status(400).json({ success: false, message: 'fcm_token wajib diisi' });
+    }
+
+    if (!user_id) {
+      return res.status(401).json({ success: false, message: 'User belum terautentikasi' });
+    }
+
+    const users = await getCollection('users');
+    const numUserId = Number(user_id);
+    const updateRes = await users.updateOne(
+      {
+        $or: [
+          { id: user_id },
+          { id: String(user_id) },
+          ...(!isNaN(numUserId) ? [{ id: numUserId }] : []),
+          { user_id: user_id },
+          { user_id: String(user_id) }
+        ]
+      },
+      { $set: { fcm_token: fcm_token, updated_at: new Date().toISOString() } }
+    );
+
+    console.log(`🔑 saveFcmToken for user ${user_id}: matched ${updateRes.matchedCount}, modified ${updateRes.modifiedCount}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'FCM Token berhasil disimpan'
+    });
+  } catch (error) {
+    console.error('Gagal menyimpan FCM token:', error);
+    return res.status(500).json({ success: false, message: 'Gagal menyimpan FCM token' });
+  }
+});
 
 router.post('/viewDataNotif', async (req, res, next) => {
   try {
     const notifikasi = await getCollection('notifikasi');
     const post = await getCollection('post');
     const users = await getCollection('users');
-    
+
     const { post_id } = req.body;
     const user_id = req.user.id;
 

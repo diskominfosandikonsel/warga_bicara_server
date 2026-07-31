@@ -8,6 +8,7 @@ const IMAGE = require('../../library/multer/image');
 const { ObjectId } = require('mongodb');
 const dbegov = require('../../db/mysql/simpeg');
 const id = require('volleyball/lib/id');
+const { sendPushNotification } = require('../../library/firebase/firebaseAdmin');
 
 
 
@@ -353,25 +354,56 @@ router.post('/viewData', async (req, res, next) => {
 })
 
 router.post('/tolakAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
-  const data = req.body;
+  let data = req.body;
+  if (req.body && typeof req.body.data === 'string') {
+    try {
+      data = JSON.parse(req.body.data);
+    } catch (e) { }
+  }
+
+  const postId = data.id || req.body.id;
   data.status = 3; // Status 3 = Ditolak
   const post = await getCollection('post');
-  const result = await post.updateOne({ id: data.id },
+  const numPostId = Number(postId);
+  const isPostObjId = ObjectId.isValid(postId);
+
+  const result = await post.updateOne({
+    $or: [
+      { id: postId },
+      { id: String(postId) },
+      { _id: postId },
+      { _id: String(postId) },
+      ...(isPostObjId ? [{ _id: new ObjectId(postId) }] : []),
+      ...(!isNaN(numPostId) ? [{ id: numPostId }] : [])
+    ]
+  },
     {
       $set: {
         status: data.status, // Status 3 = Ditolak              
       }
-    })
+    });
 
-  var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+  var simpanKeterangan = await simpanupdateKeterangan(data, postId, req);
   if (simpanKeterangan === false) {
     console.log('Gagal menyimpan keterangan');
   }
 
-  const notificationData = await sendNotification(data.id, 1, 'Laporan Dikembalikan ', 'Laporan anda dikembalikan', data.keterangan, data, false)
-  if (notificationData===false) {
-      console.log('gagal mengirim notificationData');
-  }  
+  const pesanNotif = (typeof data.keterangan === 'string' && data.keterangan.trim().length > 0)
+    ? data.keterangan
+    : 'Laporan anda telah dikembalikan/ditolak oleh Admin Kabupaten.';
+
+  const notificationData = await sendNotification(
+    postId,
+    1,
+    'Laporan Ditolak',
+    'Laporan Ditolak / Dikembalikan',
+    pesanNotif,
+    data,
+    false
+  );
+  if (notificationData === false) {
+    console.log('gagal mengirim notificationData');
+  }
 
   responQuery(result, req, res, next, "Data berhasil Dikembalikan", "Data gagal Dikembalikan");
 
@@ -383,11 +415,23 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
   console.log(req.body);
 
   const data = req.body;
-  data.status = 2; // Status 2 = Diterima
-  data.created_at = new Date()
-  // data.keterangan = "";
+  const postId = data.id || req.body.id;
+  data.status = 2; // Status 2 = Delegasi ke OPD
+  data.created_at = new Date();
   const post = await getCollection('post');
-  const result = await post.updateOne({ id: data.id },
+  const numPostId = Number(postId);
+  const isPostObjId = ObjectId.isValid(postId);
+
+  const result = await post.updateOne({
+    $or: [
+      { id: postId },
+      { id: String(postId) },
+      { _id: postId },
+      { _id: String(postId) },
+      ...(isPostObjId ? [{ _id: new ObjectId(postId) }] : []),
+      ...(!isNaN(numPostId) ? [{ id: numPostId }] : [])
+    ]
+  },
     {
       $set: {
         status: data.status, // Status 2 = Delegasi              
@@ -396,22 +440,26 @@ router.post('/terimaAduanDaerah', upload.fields([{ name: 'file', maxCount: 5 }])
         master_kec_id: data.master_kec_id,
         master_deskel_id: data.master_deskel_id
       }
-    })
+    });
 
-  var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+  var simpanKeterangan = await simpanupdateKeterangan(data, postId, req);
   if (simpanKeterangan === false) {
     console.log('Gagal menyimpan keterangan');
   }
 
-  var delegasikeopdx = await delegasikeopd(data, data.id, req)
+  var delegasikeopdx = await delegasikeopd(data, postId, req);
   if (delegasikeopdx === false) {
     console.log('Gagal delegasikeopd');
   }
 
-  const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
-  if (notificationData===false) {
-    console.log('gagal mengirim notificationData');
-  }  
+  // ====== NOTIFIKASI DIHAPUS UNTUK PELAPOR ======
+  // Pelapor tidak perlu mendapat notifikasi saat admin kabupaten mendelegasikan aduan ke OPD,
+  // karena dari sisi pelapor status aduan masih dianggap "diproses".
+  // Notifikasi akan dikirim setelah OPD menerima delegasi (terimaAduanOpd).
+  // const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
+  // if (notificationData === false) {
+  //   console.log('gagal mengirim notificationData');
+  // }
 
   responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");
 
@@ -597,7 +645,7 @@ router.post('/viewDataOPDx', async (req, res, next) => {
     console.error('Gagal mengambil data post:', error);
     res.status(500).json({ message: 'Gagal mengambil data' });
   }
-}); 
+});
 
 router.post('/viewDataOPD', async (req, res, next) => {
   try {
@@ -756,7 +804,7 @@ router.post('/viewDataOPD', async (req, res, next) => {
           pipeline: [
             {
               $match: {
-                $expr: { 
+                $expr: {
                   $and: [
                     { $eq: ["$post_id", "$$postId"] },
                     { $eq: ["$read", false] }  // ✅ HANYA READ = FALSE
@@ -865,25 +913,63 @@ router.post('/terimaAduanOpd', upload.fields([{ name: 'file', maxCount: 5 }]), a
 
   console.log(req.body);
 
-  const data = req.body;
-  data.status = 4; // tindak lanjut dengan opd yang bersangkutan
+  const data = req.body || {};
+  const postId = data.id || req.body.id;
+  data.status = 4; // status 4 = tindak lanjut / diterima oleh OPD bersangkutan
   const post = await getCollection('post');
-  const result = await post.updateOne({ id: data.id },
+  const numPostId = Number(postId);
+  const isPostObjId = ObjectId.isValid(postId);
+
+  const result = await post.updateOne({
+    $or: [
+      { id: postId },
+      { id: String(postId) },
+      { _id: postId },
+      { _id: String(postId) },
+      ...(isPostObjId ? [{ _id: new ObjectId(postId) }] : []),
+      ...(!isNaN(numPostId) ? [{ id: numPostId }] : [])
+    ]
+  },
     {
       $set: {
         status: data.status,
       }
-    })
+    });
 
-    const notificationData = await sendNotification(data.id, 2, 'Laporan Diterima ', 'Laporan anda sudah di terima oleh opd', 'Laporan sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
-    if (notificationData===false) {
-      console.log('gagal mengirim notificationData');
+  // ====== AMBIL NAMA OPD UNTUK NOTIFIKASI ======
+  let namaOpd = 'OPD Terkait';
+  try {
+    const postHandle = await getCollection('post_handle');
+    const handleData = await postHandle.findOne({ post_id: data.id });
+    const unitKerjaId = handleData?.master_unit_kerja_id || req.user?.auth?.master_unit_kerja_id;
+    if (unitKerjaId) {
+      const unitKerjaCol = await getCollection('unit_kerja');
+      const unitKerja = await unitKerjaCol.findOne({ id: unitKerjaId });
+      if (unitKerja && unitKerja.unit_kerja) {
+        namaOpd = unitKerja.unit_kerja;
+      }
     }
-    
-    var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
-    if (simpanKeterangan === false) {
-      console.log('Gagal menyimpan keterangan');
-    }
+  } catch (opdErr) {
+    console.log('⚠️ Gagal mengambil nama OPD untuk notifikasi:', opdErr?.message);
+  }
+
+  const notificationData = await sendNotification(
+    data.id,
+    2,
+    'Laporan Diterima',
+    'Laporan diterima oleh ' + namaOpd,
+    'Laporan anda telah diterima oleh ' + namaOpd + '. Silahkan komunikasi langsung ke OPD terkait melalui fitur chat.',
+    data,
+    false
+  );
+  if (notificationData === false) {
+    console.log('gagal mengirim notificationData');
+  }
+
+  var simpanKeterangan = await simpanupdateKeterangan(data, data.id, req)
+  if (simpanKeterangan === false) {
+    console.log('Gagal menyimpan keterangan');
+  }
 
   responQuery(result, req, res, next, "Data berhasil diterima", "Data gagal diterima");
 })
@@ -945,16 +1031,16 @@ router.post('/chat_view', upload.fields([{ name: 'file', maxCount: 5 }]), async 
 router.post('/chat_send', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
   var data = JSON.parse(req.body.data);
   // console.log(data);
-  
+
   data.id = uniqid()
   data.created_by = req.user.id
   data.created_at = new Date()
   const chat = await getCollection('chat');
   const result = await chat.insertOne(data);
   const notificationData = await sendNotification(data.post_id, 3, 'Pesan Baru', 'Pesan baru dari admin', 'Pesan baru dari admin', data, false)
-  if (notificationData===false) {
+  if (notificationData === false) {
     console.log('gagal mengirim notificationData');
-  }    
+  }
   responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
 })
 
@@ -970,12 +1056,12 @@ router.post('/chat_delete', async (req, res, next) => {
   }
 
   try {
-    const chat = await getCollection('chat'); 
+    const chat = await getCollection('chat');
 
     // dilakukan pencarian data
-    const findChat = await chat.findOne({ id: idx }); 
+    const findChat = await chat.findOne({ id: idx });
 
-    console.log("Data 'chat' yang akan dihapus:", findChat); 
+    console.log("Data 'chat' yang akan dihapus:", findChat);
     console.log(`--------------------------------------------\n`);
 
     const [
@@ -983,7 +1069,7 @@ router.post('/chat_delete', async (req, res, next) => {
     ] = await Promise.all([
       chat.deleteOne({ id: idx })
     ]);
-    
+
     if (resultChat.deletedCount === 0) {
       // Jika post utama tidak ditemukan, kembalikan pesan error
       return res.status(404).json({
@@ -1088,45 +1174,68 @@ router.post('/removeData', async (req, res, next) => {
 
 router.post('/tindak_lanjut_laporan', upload.fields([{ name: 'file', maxCount: 5 }]), async (req, res, next) => {
 
-    var data = JSON.parse(req.body.data); 
+  var data = JSON.parse(req.body.data);
 
-    data.id = uniqid()
-    data.created_at   = new Date()
-    data.user_id      = req.user.id 
+  data.id = uniqid()
+  data.created_at = new Date()
+  data.user_id = req.user.id
 
-    try {
-        const uploadedFiles = req.files['file']; 
+  try {
+    const uploadedFiles = req.files['file'];
 
-        if (uploadedFiles && uploadedFiles.length > 0) {
-            // Jika ada file yang diupload, lakukan sesuatu dengan file tersebut
-            // console.log('File yang diterima:', uploadedFiles.length); 
-            var uploadfile =  await simpanfile(uploadedFiles, data.id, 'tindak_lanjut_laporan');
-            if(uploadfile===false){
-              console.log('Gagal menyimpan file');
-            }
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      // Jika ada file yang diupload, lakukan sesuatu dengan file tersebut
+      // console.log('File yang diterima:', uploadedFiles.length); 
+      var uploadfile = await simpanfile(uploadedFiles, data.id, 'tindak_lanjut_laporan');
+      if (uploadfile === false) {
+        console.log('Gagal menyimpan file');
+      }
 
-            
 
-            const listMenu = await getCollection('tindak_lanjut_laporan');
-            const result = await listMenu.insertOne(data);
 
-            const notificationData = await sendNotification(data.post_id, 4, 'Tindak Lanjut', 'Laporan Telah di tindak lanjuti', 'Laporan anda telah di tindak lanjuti. Silahkan lihat hasil tindak lanjut.', data, false)
-            if (notificationData===false) {
-              console.log('gagal mengirim notificationData');
-            }    
+      const listMenu = await getCollection('tindak_lanjut_laporan');
+      const result = await listMenu.insertOne(data);
 
-            responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
-            
-
-        } else {
-            console.log('Tidak ada file yang diupload');
-            return res.status(400).json({ message: 'Tidak ada file yang diupload' });
+      // ====== AMBIL NAMA OPD UNTUK NOTIFIKASI ======
+      let namaOpdTL = 'OPD Terkait';
+      try {
+        const unitKerjaId = req.user?.auth?.master_unit_kerja_id;
+        if (unitKerjaId) {
+          const unitKerjaCol = await getCollection('unit_kerja');
+          const unitKerja = await unitKerjaCol.findOne({ id: unitKerjaId });
+          if (unitKerja && unitKerja.unit_kerja) {
+            namaOpdTL = unitKerja.unit_kerja;
+          }
         }
-    } catch (err) {
-        next(err);
-    } 
+      } catch (opdErr) {
+        console.log('⚠️ Gagal mengambil nama OPD untuk tindak lanjut:', opdErr?.message);
+      }
 
- 
+      const notificationData = await sendNotification(
+        data.post_id,
+        4,
+        'Tindak Lanjut',
+        'Bukti Tindak Lanjut dari ' + namaOpdTL,
+        'Laporan anda telah ditindak lanjuti oleh ' + namaOpdTL + '. Silahkan lihat bukti tindak lanjut.',
+        data,
+        false
+      );
+      if (notificationData === false) {
+        console.log('gagal mengirim notificationData');
+      }
+
+      responQuery(result, req, res, next, "Data berhasil ditambahkan", "Data gagal ditambahkan");
+
+
+    } else {
+      console.log('Tidak ada file yang diupload');
+      return res.status(400).json({ message: 'Tidak ada file yang diupload' });
+    }
+  } catch (err) {
+    next(err);
+  }
+
+
 })
 
 
@@ -1140,7 +1249,7 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
     //   filter.post_id = data.post_id;
     // }
     console.log(data);
-    
+
 
     const post = await getCollection('tindak_lanjut_laporan');
 
@@ -1155,7 +1264,7 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
       {
         $lookup: {
           from: "lampiran",
-          let: { postId: "$id" }, 
+          let: { postId: "$id" },
           pipeline: [
             {
               $match: {
@@ -1200,12 +1309,12 @@ router.post('/tindak_lanjut_laporan_view', async (req, res) => {
 router.post('/tindak_lanjut_laporan_hapus', async (req, res, next) => {
 
   const data = req.body;
-  var tindak_lanjut_laporan_id = data.id; 
+  var tindak_lanjut_laporan_id = data.id;
 
   if (!tindak_lanjut_laporan_id) {
     return res.status(400).json({ message: 'idLaporan wajib dikirim' });
   }
-  
+
   try {
     const lampiran = await getCollection('lampiran');
 
@@ -1222,7 +1331,7 @@ router.post('/tindak_lanjut_laporan_hapus', async (req, res, next) => {
     const hapusfile = await lampiran.deleteMany({ tabel: 'tindak_lanjut_laporan', tabel_id: tindak_lanjut_laporan_id });
 
     const post = await getCollection('tindak_lanjut_laporan');
-    const result = await post.deleteOne({ id: tindak_lanjut_laporan_id });    
+    const result = await post.deleteOne({ id: tindak_lanjut_laporan_id });
 
     responQuery(result, req, res, next, "Data berhasil dihapus", "Data gagal dihapus");
 
@@ -1421,56 +1530,115 @@ function getOPD(paramsx) {
 
 router.post('/startChat', async (req, res, next) => {
 
-  try { 
+  try {
     const notificationData = await sendNotification('post_id', 'type', 'type_notif', 'title', 'message', 'data', false)
-    if (notificationData===false) {
+    if (notificationData === false) {
       console.log('gagal mengirim notificationData');
     }
     console.log('sukses mengirim notificationData');
-    
+
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 
   console.log('Do next process here...');
   res.send({ success: true, message: 'Process completed' });
-  
-  
+
+
 });
 
 
-sendNotification = async (post_id, type, type_notif, title, message, data, read) => {
-  
-    const post = await getCollection('post');
-    const findPost = await post.findOne({ id: post_id }) 
-    const hasilcari= findPost 
-    
+async function sendNotification(post_id, type, type_notif, title, message, data, read) {
 
-    try {
+  const post = await getCollection('post');
+  const numPostId = Number(post_id);
+  const isPostObjId = ObjectId.isValid(post_id);
+  const findPost = await post.findOne({
+    $or: [
+      { id: post_id },
+      { id: String(post_id) },
+      { _id: post_id },
+      { _id: String(post_id) },
+      ...(isPostObjId ? [{ _id: new ObjectId(post_id) }] : []),
+      ...(!isNaN(numPostId) ? [{ id: numPostId }] : [])
+    ]
+  });
+  const hasilcari = findPost;
+
+  if (!hasilcari) {
+    console.log('⚠️ sendNotification: Laporan tidak ditemukan untuk post_id:', post_id);
+    return false;
+  }
+
+
+  try {
     const datax = {
-                    id          : uniqid(),
-                    post_id     : post_id,
-                    user_id     : hasilcari.user_id,
-                    type        : type,
-                    type_notif  : type_notif,
-                    title       : title,
-                    message     : message,
-                    read        : read,
-                    data        : data,
-                    created_at  : new Date()
-                  } 
-      const notifikasi  = await getCollection('notifikasi');
-      const result      = await notifikasi.insertOne(datax);                  
-      console.log('sendNotification data ==> ');
-      console.log(data);
+      id: uniqid(),
+      post_id: post_id,
+      user_id: hasilcari.user_id,
+      type: type,
+      type_notif: type_notif,
+      title: title,
+      message: message,
+      read: read,
+      data: data,
+      created_at: new Date()
+    }
+    const notifikasi = await getCollection('notifikasi');
+    const result = await notifikasi.insertOne(datax);
+    console.log('sendNotification data ==> ');
+    console.log(data);
 
-      if(result.acknowledged===true)
-        console.log('sendNotification berhasil'); 
-        return true
-    } catch (error) {
-        console.log('sendNotification error:', error);
-        return false; 
-    } 
+    // ====== FCM PUSH NOTIFICATION TRIGGER ======
+    try {
+      if (hasilcari && hasilcari.user_id) {
+        const users = await getCollection('users');
+        const numId = Number(hasilcari.user_id);
+        const isUserObjId = ObjectId.isValid(hasilcari.user_id);
+
+        // Robust matching untuk tipe ID (string, number, ObjectId, field id/user_id/_id)
+        const targetUser = await users.findOne({
+          $or: [
+            { id: hasilcari.user_id },
+            { id: String(hasilcari.user_id) },
+            { _id: hasilcari.user_id },
+            { _id: String(hasilcari.user_id) },
+            ...(isUserObjId ? [{ _id: new ObjectId(hasilcari.user_id) }] : []),
+            ...(!isNaN(numId) ? [{ id: numId }] : []),
+            { user_id: hasilcari.user_id },
+            { user_id: String(hasilcari.user_id) }
+          ]
+        });
+
+        if (targetUser && targetUser.fcm_token) {
+          let notifType = 'status_update';
+          if (type === 3 || type === '3') notifType = 'chat';
+          else if (type === 4 || type === '4') notifType = 'tindak_lanjut';
+
+          console.log('🚀 Mengirim Push Notification FCM ke token:', targetUser.fcm_token.substring(0, 15) + '...');
+          await sendPushNotification(
+            targetUser.fcm_token,
+            title || 'Warga Bicara',
+            message || 'Ada pemberitahuan baru mengenai laporan Anda',
+            { post_id: String(post_id), type: notifType }
+          );
+        } else {
+          console.log('⚠️ User target tidak memiliki fcm_token atau user tidak ditemukan. Target user_id:', hasilcari.user_id);
+        }
+      } else {
+        console.log('⚠️ Data laporan tidak memiliki user_id untuk post_id:', post_id);
+      }
+    } catch (fcmErr) {
+      console.error('❌ FCM Push Notification Error:', fcmErr);
+    }
+
+    if (result.acknowledged === true)
+      console.log('sendNotification berhasil');
+    return true
+  } catch (error) {
+    console.log('sendNotification error:', error);
+    return false;
+  }
 }
 
 

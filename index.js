@@ -65,7 +65,7 @@ app.get('/', async (req, res) => {
 
 // GLOBAL VARIABEL
 global.SecretKey = 'ini sekret key';
-global.secretDuration = 0;
+global.secretDuration = 1440; // Default 1 Hari (1440 Menit) untuk Admin / Server
 
 // Function to generate a random 8-character string
 function buatSecretKey() {
@@ -90,18 +90,17 @@ async function saveSecretDuration(duration) {
 
 async function startSecretLoop() { 
   const db = await getCollection('durationSecretKey');
-  const row = await db.findOne({}) 
+  let row = await db.findOne({}) 
 
-  if (row) {
-    // console.log(row);
-    global.secretDuration = row.duration;
-    global.SecretKey = buatSecretKey();
-    setInterval(buatSecretKey, global.secretDuration * 60000);
-  }else{
-    console.log("Tidak ada duration secret key");
-    console.log("Silahkan set durasi secret key");
-  } 
+  if (!row) {
+    const defaultDuration = 1440;
+    await db.insertOne({ "duration": defaultDuration });
+    row = { duration: defaultDuration };
+  }
 
+  global.secretDuration = row.duration || 1440;
+  global.SecretKey = buatSecretKey();
+  setInterval(buatSecretKey, global.secretDuration * 60000);
 }
 
 
@@ -212,6 +211,7 @@ async function startSecretLoop() {
 
   const notifikasi_client = require('./api/notifikasi/android/notifikasi')
   app.use('/notifikasi_android', middleware.isLoggedIn, notifikasi_client)
+  app.use('/api/v1/notifikasi', middleware.isLoggedIn, notifikasi_client)
 
   const rating_client = require('./api/rating/rating_android')
   app.use('/rating_android', middleware.isLoggedIn, rating_client)

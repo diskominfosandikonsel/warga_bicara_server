@@ -8,6 +8,7 @@ const IMAGE = require('../../library/multer/image');
 
 const { ObjectId } = require('mongodb');
 const id = require('volleyball/lib/id');
+const { sendPushNotification } = require('../../library/firebase/firebaseAdmin');
 
 
 
@@ -136,13 +137,36 @@ router.post('/viewData', async (req, res, next) => {
     const page = parseInt(req.body.page) || 1;
     const limit = 10;
     const cari = req.body.cari || '';
-    
+    const targetPostId = req.body.id || req.body.post_id;
+    let matchFilter = {};
+    if (targetPostId) {
+      const isObjId = ObjectId.isValid(targetPostId);
+      matchFilter = {
+        $or: [
+          { id: targetPostId },
+          { id: String(targetPostId) },
+          { _id: targetPostId },
+          ...(isObjId ? [{ _id: new ObjectId(targetPostId) }] : [])
+        ]
+      };
+    } else {
+      const numUserId = Number(req.user.id);
+      const isUserObjId = ObjectId.isValid(req.user.id);
+      matchFilter = {
+        $or: [
+          { user_id: req.user.id },
+          { user_id: String(req.user.id) },
+          { user_id: req.user._id },
+          ...(isUserObjId ? [{ user_id: new ObjectId(req.user.id) }] : []),
+          ...(!isNaN(numUserId) ? [{ user_id: numUserId }] : [])
+        ],
+        ...(cari ? { title: { $regex: cari, $options: 'i' } } : {})
+      };
+    }
+
     const pipeline = [
       {
-        $match: {
-          user_id: req.user.id,
-          title: { $regex: cari, $options: 'i' }
-        }
+        $match: matchFilter
       },
 
       {
@@ -848,10 +872,24 @@ router.post('/verifikasi_laporan', upload.fields([{ name: 'file', maxCount: 5 }]
     console.log('Gagal menyimpan keterangan');
   }
 
-  // const notificationData = await sendNotification(data.id, 1, 'Laporan Diterima ', 'Dokumen sudah di disposisi di opd terkait', 'Dokumen sudah di disposisi ke opd Terkait. Silahkan komunikasi langsung ke opd terkait melalui chat', data, false)
-  // if (notificationData===false) {
-  //   console.log('gagal mengirim notificationData');
-  // }  
+  // ====== FCM PUSH NOTIFICATION FOR STATUS UPDATE ======
+  try {
+    const targetPost = await post.findOne({ id: data.id });
+    if (targetPost && targetPost.user_id) {
+      const users = await getCollection('users');
+      const targetUser = await users.findOne({ id: targetPost.user_id });
+      if (targetUser && targetUser.fcm_token) {
+        await sendPushNotification(
+          targetUser.fcm_token,
+          'Status Aduan Diperbarui',
+          `Laporan "${targetPost.title || 'Aduan'}" telah diverifikasi oleh petugas.`,
+          { post_id: String(data.id), type: 'status_update' }
+        );
+      }
+    }
+  } catch (fcmErr) {
+    console.error('FCM status notification error:', fcmErr);
+  }
 
   responQuery(result, req, res, next, "Data berhasil Di Delegasikan", "Data gagal Di Delegasikan");
 
@@ -1150,7 +1188,27 @@ router.post('/addComment', async (req, res) => {
 
     const result = await comments.insertOne(newComment);
 
-
+    // ====== FCM PUSH NOTIFICATION FOR CHAT ======
+    try {
+      const posts = await getCollection('post');
+      const targetPost = await posts.findOne({ id: post_id });
+      if (targetPost && targetPost.user_id) {
+        const users = await getCollection('users');
+        // Jika komentator bukan pemilik post, kirim notif ke pemilik post
+        const recipientId = (user_id === targetPost.user_id) ? parent_id : targetPost.user_id;
+        const targetUser = await users.findOne({ id: recipientId || targetPost.user_id });
+        if (targetUser && targetUser.fcm_token) {
+          await sendPushNotification(
+            targetUser.fcm_token,
+            'Pesan Baru di Aduan',
+            comment.substring(0, 100),
+            { post_id: String(post_id), type: 'chat' }
+          );
+        }
+      }
+    } catch (fcmErr) {
+      console.error('FCM chat notification error:', fcmErr);
+    }
 
     return res.status(200).json({
       message: parent_id ? "Reply berhasil ditambahkan" : "Comment berhasil ditambahkan",
