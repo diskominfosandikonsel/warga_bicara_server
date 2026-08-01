@@ -332,7 +332,8 @@ router.post('/autocomplete', async (req, res, next) => {
 
 router.post('/listSidebar', async(req, res, next) =>{
     const klpId = req.user?.auth?.authorization;
-    if (!klpId) {
+    const klpIdStr = String(klpId ?? '');
+    if (!klpIdStr) {
         return res.status(401).json({ message: 'Authorization kelompok tidak ditemukan' });
     }
 
@@ -342,14 +343,14 @@ router.post('/listSidebar', async(req, res, next) =>{
     {
         $lookup: {
         from: 'menu_klp_list',
-        let: { menuId: '$id' },
+        let: { menuId: '$id', klpIdStr },
         pipeline: [
             {
             $match: {
                 $expr: {
                 $and: [
                     { $eq: ['$menu_id', '$$menuId'] },
-                    { $eq: ['$menu_klp_id', klpId] }
+                    { $eq: [{ $toString: '$menu_klp_id' }, '$$klpIdStr'] }
                 ]
                 }
             }
@@ -376,15 +377,6 @@ router.post('/listSidebar', async(req, res, next) =>{
         }
     },
     {
-        $match: {
-           $or: [
-            { readx: true },
-            { updatex: true },
-            { deletex: true },
-            { addx: true } ]
-           }
-    },
-    {
         $project: {
         menu_klp_data: 0 // sembunyikan join-an mentah
         }
@@ -396,17 +388,31 @@ router.post('/listSidebar', async(req, res, next) =>{
     }
     ]).toArray();
 
-    const nest = (items, id = null, link = 'parent') =>
-    items
-        .filter(item => item[link] === id)
-        .map(item => {
-        const children = nest(items, item.id, link);
-        return {
-            ...item,
-            ...(children.length > 0 && { child: children }) // hanya tambahkan jika tidak kosong
-        };
-    });
-    res.send(nest(result))
+    const hasAnyAccess = item => Boolean(item.readx || item.updatex || item.deletex || item.addx);
+
+    const buildTree = (items, parentId = null) => {
+        const children = items
+            .filter(item => item.parent === parentId)
+            .map(item => {
+                const childItems = buildTree(items, item.id);
+                const hasVisibleChild = childItems.length > 0;
+                const isVisible = hasAnyAccess(item) || hasVisibleChild;
+
+                if (!isVisible) {
+                    return null;
+                }
+
+                return {
+                    ...item,
+                    ...(childItems.length > 0 && { child: childItems })
+                };
+            })
+            .filter(Boolean);
+
+        return children;
+    };
+
+    res.send(buildTree(result))
     
 
 })

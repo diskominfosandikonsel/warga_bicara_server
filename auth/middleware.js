@@ -142,7 +142,8 @@ function isLoggedIn(req, res, next){
 
 async function sideMenuMidleware(req, res, next){
   const klpId = req.user?.auth?.authorization;
-  if (!klpId) {
+  const klpIdStr = String(klpId ?? '');
+  if (!klpIdStr) {
     return res.status(401).json({ message: 'Authorization kelompok tidak ditemukan' });
   }
 
@@ -150,7 +151,11 @@ async function sideMenuMidleware(req, res, next){
   const results = await menu_klp_list.aggregate([
     
     {
-      $match: { menu_klp_id: klpId }
+      $match: {
+        $expr: {
+          $eq: [{ $toString: '$menu_klp_id' }, klpIdStr]
+        }
+      }
     },
     {
       $lookup: {
