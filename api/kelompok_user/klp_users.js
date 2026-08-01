@@ -331,7 +331,11 @@ router.post('/autocomplete', async (req, res, next) => {
 
 
 router.post('/listSidebar', async(req, res, next) =>{
-    const klpId = parseInt(req.user.auth.authorization) 
+    const klpId = req.user?.auth?.authorization;
+    if (!klpId) {
+        return res.status(401).json({ message: 'Authorization kelompok tidak ditemukan' });
+    }
+
     const menuCollection = await getCollection('menu');
 
     const result = await menuCollection.aggregate([

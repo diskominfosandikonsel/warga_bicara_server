@@ -141,9 +141,10 @@ function isLoggedIn(req, res, next){
 }
 
 async function sideMenuMidleware(req, res, next){
-  const klpId = parseInt(req.user.auth.authorization)
-  // console.log(klpId);
-  // console.log('sideMenuMidleware');
+  const klpId = req.user?.auth?.authorization;
+  if (!klpId) {
+    return res.status(401).json({ message: 'Authorization kelompok tidak ditemukan' });
+  }
 
   const menu_klp_list = await getCollection('menu_klp_list');
   const results = await menu_klp_list.aggregate([
