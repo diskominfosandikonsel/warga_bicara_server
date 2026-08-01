@@ -154,14 +154,69 @@ router.post('/getView', async (req, res, next) => {
 
     try {
         const colUsers = await getCollection('users'); //memilih collection yang mau di query
-        // const result = await profile.find({
 
         const total = await colUsers.countDocuments(filter); // total data
-        const users = await colUsers
-            .find(filter)
-            .skip(skip)
-            .limit(limitNumber)
-            .toArray();
+        const users = await colUsers.aggregate([
+            { $match: filter },
+            {
+                $lookup: {
+                    from: 'master_agama',
+                    localField: 'master_agama_id',
+                    foreignField: 'id',
+                    as: 'master_agama_info'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'master_pekerjaan',
+                    localField: 'master_pekerjaan_id',
+                    foreignField: 'id',
+                    as: 'master_pekerjaan_info'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'master_pendidikan',
+                    localField: 'master_pendidikan_id',
+                    foreignField: 'id',
+                    as: 'master_pendidikan_info'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'unit_kerja',
+                    localField: 'master_unit_kerja_id',
+                    foreignField: 'id',
+                    as: 'master_unit_kerja_info'
+                }
+            },
+            {
+                $addFields: {
+                    master_agama_uraian: {
+                        $ifNull: [{ $arrayElemAt: ['$master_agama_info.uraian', 0] }, null]
+                    },
+                    master_pekerjaan_uraian: {
+                        $ifNull: [{ $arrayElemAt: ['$master_pekerjaan_info.uraian', 0] }, null]
+                    },
+                    master_pendidikan_uraian: {
+                        $ifNull: [{ $arrayElemAt: ['$master_pendidikan_info.uraian', 0] }, null]
+                    },
+                    master_unit_kerja_uraian: {
+                        $ifNull: [{ $arrayElemAt: ['$master_unit_kerja_info.unit_kerja', 0] }, null]
+                    }
+                }
+            },
+            {
+                $project: {
+                    master_agama_info: 0,
+                    master_pekerjaan_info: 0,
+                    master_pendidikan_info: 0,
+                    master_unit_kerja_info: 0
+                }
+            },
+            { $skip: skip },
+            { $limit: limitNumber }
+        ]).toArray();
 
         res.json({
             currentPage: pageNumber,
