@@ -1576,5 +1576,122 @@ router.post('/trending_topics_detail_post', async (req, res) => {
 });
 
 
+router.post('/kepuasan_pengguna', async (req, res) => {
+  try {
+    const ratingColl = await getCollection('rating');
+    const postHandleColl = await getCollection('post_handle');
+    const menuKlpColl = await getCollection('menu_klp');
+
+    const { start_date, end_date, kategori_id } = req.body || {};
+    const user_role_id = req.user?.auth?.authorization;
+
+    let roleData = null;
+    if (user_role_id) {
+      roleData = await menuKlpColl.findOne({ id: user_role_id });
+    }
+    const isAdminOPD = roleData && roleData.uraian === "Admin OPD";
+
+    let allowedPostIds = null;
+    if (isAdminOPD) {
+      const user_unit_kerja = req.user?.auth?.master_unit_kerja_id;
+      if (user_unit_kerja) {
+        const post_handles = await postHandleColl.find({
+          master_unit_kerja_id: user_unit_kerja
+        }).toArray();
+        allowedPostIds = post_handles.map(ph => ph.post_id);
+      }
+    }
+
+    const matchFilter = {};
+    if (allowedPostIds !== null) {
+      matchFilter.post_id = { $in: allowedPostIds };
+    }
+
+    if (start_date && end_date) {
+      matchFilter.created_at = {
+        $gte: new Date(start_date),
+        $lte: new Date(end_date + "T23:59:59")
+      };
+    }
+
+    const pipeline = [
+      { $match: matchFilter },
+      {
+        $lookup: {
+          from: 'post',
+          localField: 'post_id',
+          foreignField: 'id',
+          as: 'post_info'
+        }
+      },
+      { $unwind: { path: '$post_info', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'created_by',
+          foreignField: 'id',
+          as: 'user_info'
+        }
+      },
+      { $unwind: { path: '$user_info', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          id: 1,
+          post_id: 1,
+          nilai: 1,
+          ulasan: 1,
+          created_at: 1,
+          created_by: 1,
+          post_title: '$post_info.title',
+          post_kategori: '$post_info.master_kategori_id',
+          pelapor_nama: { $ifNull: ['$user_info.nama', '$user_info.username', 'Pelapor'] }
+        }
+      },
+      { $sort: { created_at: -1 } }
+    ];
+
+    const ratingRecords = await ratingColl.aggregate(pipeline).toArray();
+
+    let totalScore = 0;
+    let totalUlasan = ratingRecords.length;
+    const distribusi = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+    ratingRecords.forEach(r => {
+      const numVal = Number(r.nilai) || 0;
+      const val = Math.min(5, Math.max(1, Math.round(numVal)));
+      if (val >= 1 && val <= 5) {
+        distribusi[val] = (distribusi[val] || 0) + 1;
+        totalScore += numVal;
+      }
+    });
+
+    const rataRata = totalUlasan > 0 ? parseFloat((totalScore / totalUlasan).toFixed(1)) : 0;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        rata_rata: rataRata,
+        total_ulasan: totalUlasan,
+        distribusi: {
+          star5: distribusi[5] || 0,
+          star4: distribusi[4] || 0,
+          star3: distribusi[3] || 0,
+          star2: distribusi[2] || 0,
+          star1: distribusi[1] || 0,
+        },
+        list_ulasan: ratingRecords
+      }
+    });
+  } catch (error) {
+    console.error("Error in kepuasan_pengguna endpoint:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data kepuasan pengguna",
+      error: error.message
+    });
+  }
+});
+
 
 module.exports = router
