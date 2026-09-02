@@ -239,19 +239,56 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
-      // Join users → ambil nama
+      // Join users → ambil informasi pelapor
       {
         $lookup: {
           from: "users",
           localField: "user_id",
           foreignField: "id",
-          as: "createdBy"
+          as: "pelapor_data"
+        }
+      },
+      {
+        $addFields: {
+          pelapor_obj: { $arrayElemAt: ["$pelapor_data", 0] }
         }
       },
       {
         $set: {
-          createdBy: { $arrayElemAt: ["$createdBy.nama", 0] }
+          createdBy: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor: {
+            id: { $ifNull: ["$pelapor_obj.id", ""] },
+            username: { $ifNull: ["$pelapor_obj.username", ""] },
+            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+            email: { $ifNull: ["$pelapor_obj.email", ""] },
+            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+          },
+          informasi_pelapor: {
+            id: { $ifNull: ["$pelapor_obj.id", ""] },
+            username: { $ifNull: ["$pelapor_obj.username", ""] },
+            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+            email: { $ifNull: ["$pelapor_obj.email", ""] },
+            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+          },
+          pelapor_nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor_nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor_nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+          pelapor_hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+          pelapor_no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+          pelapor_email: { $ifNull: ["$pelapor_obj.email", ""] },
+          pelapor_alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
         }
+      },
+      {
+        $unset: ["pelapor_data", "pelapor_obj"]
       },
 
       // Join lampiran (langsung filter di pipeline)
@@ -530,16 +567,57 @@ router.post('/viewDataOPDx', async (req, res, next) => {
         }
       },
 
-      // Join users
+      // Join users → ambil informasi pelapor
       {
         $lookup: {
           from: "users",
           localField: "user_id",
           foreignField: "id",
-          as: "createdBy"
+          as: "pelapor_data"
         }
       },
-      { $set: { createdBy: { $arrayElemAt: ["$createdBy.nama", 0] } } },
+      {
+        $addFields: {
+          pelapor_obj: { $arrayElemAt: ["$pelapor_data", 0] }
+        }
+      },
+      {
+        $set: {
+          createdBy: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor: {
+            id: { $ifNull: ["$pelapor_obj.id", ""] },
+            username: { $ifNull: ["$pelapor_obj.username", ""] },
+            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+            email: { $ifNull: ["$pelapor_obj.email", ""] },
+            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+          },
+          informasi_pelapor: {
+            id: { $ifNull: ["$pelapor_obj.id", ""] },
+            username: { $ifNull: ["$pelapor_obj.username", ""] },
+            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+            email: { $ifNull: ["$pelapor_obj.email", ""] },
+            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+          },
+          pelapor_nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor_nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor_nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+          pelapor_hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+          pelapor_no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+          pelapor_email: { $ifNull: ["$pelapor_obj.email", ""] },
+          pelapor_alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+        }
+      },
+      {
+        $unset: ["pelapor_data", "pelapor_obj"]
+      },
 
       // Join lampiran
       {
@@ -712,16 +790,57 @@ router.post('/viewDataOPD', async (req, res, next) => {
         }
       },
 
-      // Join users
+      // Join users → ambil informasi pelapor
       {
         $lookup: {
           from: "users",
           localField: "user_id",
           foreignField: "id",
-          as: "createdBy"
+          as: "pelapor_data"
         }
       },
-      { $set: { createdBy: { $arrayElemAt: ["$createdBy.nama", 0] } } },
+      {
+        $addFields: {
+          pelapor_obj: { $arrayElemAt: ["$pelapor_data", 0] }
+        }
+      },
+      {
+        $set: {
+          createdBy: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor: {
+            id: { $ifNull: ["$pelapor_obj.id", ""] },
+            username: { $ifNull: ["$pelapor_obj.username", ""] },
+            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+            email: { $ifNull: ["$pelapor_obj.email", ""] },
+            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+          },
+          informasi_pelapor: {
+            id: { $ifNull: ["$pelapor_obj.id", ""] },
+            username: { $ifNull: ["$pelapor_obj.username", ""] },
+            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+            email: { $ifNull: ["$pelapor_obj.email", ""] },
+            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+          },
+          pelapor_nama: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor_nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
+          pelapor_nik: { $ifNull: ["$pelapor_obj.nik", ""] },
+          pelapor_hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
+          pelapor_no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
+          pelapor_email: { $ifNull: ["$pelapor_obj.email", ""] },
+          pelapor_alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
+        }
+      },
+      {
+        $unset: ["pelapor_data", "pelapor_obj"]
+      },
 
       // Join lampiran
       {
