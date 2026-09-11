@@ -239,57 +239,41 @@ router.post('/viewData', async (req, res, next) => {
         }
       },
 
-      // Join users → ambil informasi pelapor
+      // ====== [MODIFIKASI: Join users untuk mengambil detail profil pelapor (nama, nik, hp, email, alamat)] ======
       {
         $lookup: {
           from: "users",
-          localField: "user_id",
-          foreignField: "id",
-          as: "pelapor_data"
+          let: { uid: "$user_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$id", "$$uid"]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                nama: 1,
+                username: 1,
+                nik: 1,
+                hp: 1,
+                email: 1,
+                alamat: 1
+              }
+            }
+          ],
+          as: "createdBy"
         }
       },
       {
-        $addFields: {
-          pelapor_obj: { $arrayElemAt: ["$pelapor_data", 0] }
+        $unwind: {
+          path: "$createdBy",
+          preserveNullAndEmptyArrays: true
         }
       },
-      {
-        $set: {
-          createdBy: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor: {
-            id: { $ifNull: ["$pelapor_obj.id", ""] },
-            username: { $ifNull: ["$pelapor_obj.username", ""] },
-            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-            email: { $ifNull: ["$pelapor_obj.email", ""] },
-            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-          },
-          informasi_pelapor: {
-            id: { $ifNull: ["$pelapor_obj.id", ""] },
-            username: { $ifNull: ["$pelapor_obj.username", ""] },
-            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-            email: { $ifNull: ["$pelapor_obj.email", ""] },
-            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-          },
-          pelapor_nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor_nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor_nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-          pelapor_hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-          pelapor_no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-          pelapor_email: { $ifNull: ["$pelapor_obj.email", ""] },
-          pelapor_alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-        }
-      },
-      {
-        $unset: ["pelapor_data", "pelapor_obj"]
-      },
+      // ====== [END MODIFIKASI: Join users] ======
 
       // Join lampiran (langsung filter di pipeline)
       {
@@ -355,6 +339,7 @@ router.post('/viewData', async (req, res, next) => {
                 id: 1,
                 master_unit_kerja_id: 1,
                 status: 1,
+                created_at: 1, // [MODIFIKASI: created_at disertakan untuk keperluan timeline series tanggal disposisi]
                 "unit_kerja.id": 1,
                 "unit_kerja.unit_kerja": 1
               }
@@ -567,57 +552,16 @@ router.post('/viewDataOPDx', async (req, res, next) => {
         }
       },
 
-      // Join users → ambil informasi pelapor
+      // Join users
       {
         $lookup: {
           from: "users",
           localField: "user_id",
           foreignField: "id",
-          as: "pelapor_data"
+          as: "createdBy"
         }
       },
-      {
-        $addFields: {
-          pelapor_obj: { $arrayElemAt: ["$pelapor_data", 0] }
-        }
-      },
-      {
-        $set: {
-          createdBy: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor: {
-            id: { $ifNull: ["$pelapor_obj.id", ""] },
-            username: { $ifNull: ["$pelapor_obj.username", ""] },
-            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-            email: { $ifNull: ["$pelapor_obj.email", ""] },
-            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-          },
-          informasi_pelapor: {
-            id: { $ifNull: ["$pelapor_obj.id", ""] },
-            username: { $ifNull: ["$pelapor_obj.username", ""] },
-            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-            email: { $ifNull: ["$pelapor_obj.email", ""] },
-            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-          },
-          pelapor_nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor_nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor_nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-          pelapor_hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-          pelapor_no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-          pelapor_email: { $ifNull: ["$pelapor_obj.email", ""] },
-          pelapor_alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-        }
-      },
-      {
-        $unset: ["pelapor_data", "pelapor_obj"]
-      },
+      { $set: { createdBy: { $arrayElemAt: ["$createdBy.nama", 0] } } },
 
       // Join lampiran
       {
@@ -683,6 +627,7 @@ router.post('/viewDataOPDx', async (req, res, next) => {
                 id: 1,
                 master_unit_kerja_id: 1,
                 status: 1,
+                created_at: 1, // [MODIFIKASI: created_at disertakan untuk keperluan timeline series tanggal disposisi]
                 "unit_kerja.id": 1,
                 "unit_kerja.unit_kerja": 1
               }
@@ -790,57 +735,41 @@ router.post('/viewDataOPD', async (req, res, next) => {
         }
       },
 
-      // Join users → ambil informasi pelapor
+      // ====== [MODIFIKASI: Join users untuk mengambil detail profil pelapor di view OPD] ======
       {
         $lookup: {
           from: "users",
-          localField: "user_id",
-          foreignField: "id",
-          as: "pelapor_data"
+          let: { uid: "$user_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$id", "$$uid"]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 0,
+                nama: 1,
+                username: 1,
+                nik: 1,
+                hp: 1,
+                email: 1,
+                alamat: 1
+              }
+            }
+          ],
+          as: "createdBy"
         }
       },
       {
-        $addFields: {
-          pelapor_obj: { $arrayElemAt: ["$pelapor_data", 0] }
+        $unwind: {
+          path: "$createdBy",
+          preserveNullAndEmptyArrays: true
         }
       },
-      {
-        $set: {
-          createdBy: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor: {
-            id: { $ifNull: ["$pelapor_obj.id", ""] },
-            username: { $ifNull: ["$pelapor_obj.username", ""] },
-            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-            email: { $ifNull: ["$pelapor_obj.email", ""] },
-            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-          },
-          informasi_pelapor: {
-            id: { $ifNull: ["$pelapor_obj.id", ""] },
-            username: { $ifNull: ["$pelapor_obj.username", ""] },
-            nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-            nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-            hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-            no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-            email: { $ifNull: ["$pelapor_obj.email", ""] },
-            alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-          },
-          pelapor_nama: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor_nama_lengkap: { $ifNull: ["$pelapor_obj.nama", ""] },
-          pelapor_nik: { $ifNull: ["$pelapor_obj.nik", ""] },
-          pelapor_hp: { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] },
-          pelapor_no_hp: { $ifNull: ["$pelapor_obj.no_hp", { $ifNull: ["$pelapor_obj.hp", { $ifNull: ["$pelapor_obj.nomor_hp", ""] }] }] },
-          pelapor_email: { $ifNull: ["$pelapor_obj.email", ""] },
-          pelapor_alamat: { $ifNull: ["$pelapor_obj.alamat", ""] }
-        }
-      },
-      {
-        $unset: ["pelapor_data", "pelapor_obj"]
-      },
+      // ====== [END MODIFIKASI: Join users] ======
 
       // Join lampiran
       {
@@ -906,6 +835,7 @@ router.post('/viewDataOPD', async (req, res, next) => {
                 id: 1,
                 master_unit_kerja_id: 1,
                 status: 1,
+                created_at: 1, // [MODIFIKASI: created_at disertakan untuk keperluan timeline series tanggal disposisi]
                 "unit_kerja.id": 1,
                 "unit_kerja.unit_kerja": 1
               }
@@ -1822,8 +1752,153 @@ const responQuery = async (result, req, res, next, successMessage, errorMessage)
       message: 'Internal server error'
     });
   }
-
 };
 
+// =====================================================================================================
+// ====== [MODIFIKASI / FITUR BARU: ENDPOINT EKSPOR & REKAPITULASI LAPORAN UNTUK AUDIT BPK / CETAK] ======
+// Method: POST
+// Route: /api/v1/postingan_laporan_website/exportData
+// Deskripsi: Mengambil log register / tiket aduan lengkap (filter tanggal, status, OPD, kategori,
+//            relasi pelapor, riwayat tindak lanjut, post_keterangan, post_handle, dan lampiran)
+// =====================================================================================================
+router.post('/exportData', async (req, res, next) => {
+  try {
+    const postCol = await getCollection('post');
+    const userCol = await getCollection('users');
+    const katCol = await getCollection('master_kategori_laporan');
+    const subKatCol = await getCollection('master_kategori_laporan_sub');
+    const unitCol = await getCollection('unit_kerja');
+    const handleCol = await getCollection('post_handle');
+    const tlCol = await getCollection('tindak_lanjut_laporan');
+    const ketCol = await getCollection('post_keterangan');
+    const lampCol = await getCollection('lampiran');
+
+    const { startDate, endDate, status, master_kategori_laporan_id, master_unit_kerja_id, cari } = req.body;
+
+    const filter = {};
+
+    if (cari) {
+      filter.$or = [
+        { title: { $regex: cari, $options: 'i' } },
+        { body: { $regex: cari, $options: 'i' } },
+        { id: { $regex: cari, $options: 'i' } },
+        { nama_desa: { $regex: cari, $options: 'i' } },
+        { nama_kecamatan: { $regex: cari, $options: 'i' } }
+      ];
+    }
+
+    if (status !== undefined && status !== null && status !== '') {
+      filter.status = parseInt(status);
+    }
+
+    if (master_kategori_laporan_id) {
+      filter.master_kategori_id = master_kategori_laporan_id;
+    }
+
+    if (startDate || endDate) {
+      filter.created_at = {};
+      if (startDate) {
+        const sDate = new Date(startDate);
+        sDate.setHours(0, 0, 0, 0);
+        filter.created_at.$gte = sDate.toISOString();
+      }
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(23, 59, 59, 999);
+        filter.created_at.$lte = eDate.toISOString();
+      }
+    }
+
+    const posts = await postCol.find(filter).sort({ created_at: -1 }).toArray();
+
+    const statusMap = {
+      1: 'Menunggu Verifikasi',
+      2: 'Delegasi ke OPD',
+      3: 'Ditolak Admin Daerah',
+      4: 'Tindak Lanjut OPD',
+      5: 'Verified Masyarakat',
+      6: 'Selesai / Tuntas',
+      7: 'Penolakan Admin OPD'
+    };
+
+    const formattedData = [];
+
+    for (let i = 0; i < posts.length; i++) {
+      const p = posts[i];
+      const user = await userCol.findOne({ id: p.user_id });
+      const kat = p.master_kategori_id ? await katCol.findOne({ id: p.master_kategori_id }) : null;
+      const subKat = p.master_sub_kategori_id ? await subKatCol.findOne({ id: p.master_sub_kategori_id }) : null;
+      
+      const handles = await handleCol.find({ post_id: p.id }).toArray();
+      const opdList = [];
+      for (const h of handles) {
+        const u = await unitCol.findOne({ id: h.master_unit_kerja_id });
+        if (u) opdList.push({ id: h.master_unit_kerja_id, nama: u.unit_kerja || u.nama || u.uraian, created_at: h.created_at });
+        else opdList.push({ id: h.master_unit_kerja_id, nama: h.master_unit_kerja_id, created_at: h.created_at });
+      }
+
+      // Filter master_unit_kerja_id jika dipilih
+      if (master_unit_kerja_id && !handles.some(h => h.master_unit_kerja_id === master_unit_kerja_id)) {
+        continue;
+      }
+
+      const lampiranPengaduan = await lampCol.find({ tabel_id: p.id, tabel: 'post' }).toArray();
+      const tindakLanjutList = await tlCol.find({ post_id: p.id }).toArray();
+      const riwayatKet = await ketCol.find({ post_id: p.id }).sort({ created_at: 1 }).toArray();
+
+      formattedData.push({
+        no: formattedData.length + 1,
+        id: p.id,
+        _id: p._id,
+        created_at: p.created_at,
+        title: p.title || '-',
+        body: p.body || '-',
+        status: p.status,
+        status_teks: statusMap[p.status] || ('Status ' + p.status),
+        user_id: p.user_id,
+        pelapor: {
+          nama: user ? user.nama : '-',
+          nik: user ? user.nik : '-',
+          hp: user ? user.hp : '-',
+          email: user ? user.email : '-',
+          alamat: user ? user.alamat : '-'
+        },
+        anonymous: p.anonymous ? true : false,
+        master_kategori_id: p.master_kategori_id,
+        kategori_uraian: kat ? kat.uraian : '-',
+        master_sub_kategori_id: p.master_sub_kategori_id,
+        sub_kategori_uraian: subKat ? subKat.uraian : '-',
+        nama_kecamatan: p.nama_kecamatan || '-',
+        nama_desa: p.nama_desa || '-',
+        lat: p.lat,
+        lng: p.lng,
+        opd_handle: opdList,
+        opd_nama: opdList.map(o => o.nama).join(', ') || '-',
+        lampiran: lampiranPengaduan,
+        tindak_lanjut: tindakLanjutList,
+        riwayat: riwayatKet
+      });
+    }
+
+    const stats = {
+      total: formattedData.length,
+      selesai: formattedData.filter(d => d.status === 6).length,
+      proses: formattedData.filter(d => d.status === 4).length,
+      ditolak: formattedData.filter(d => d.status === 3 || d.status === 7).length,
+      menunggu: formattedData.filter(d => d.status === 1 || d.status === 2).length,
+      verified: formattedData.filter(d => d.status === 5).length
+    };
+
+    res.status(200).json({
+      status: 'success',
+      totalData: formattedData.length,
+      stats: stats,
+      data: formattedData
+    });
+  } catch (error) {
+    console.error('Gagal mengambil data export post:', error);
+    res.status(500).json({ message: 'Gagal mengambil data export' });
+  }
+});
 
 module.exports = router
