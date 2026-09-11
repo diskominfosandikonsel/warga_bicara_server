@@ -153,17 +153,16 @@ router.post('/getView', async (req, res, next) => {
     
 
     try {
-        const colUsers = await getCollection('users'); //memilih collection yang mau di query
-
-        const total = await colUsers.countDocuments(filter); // total data
-        const users = await colUsers.aggregate([
+        // ====== [MODIFIKASI: Lookup relasi master data (jenis kelamin, pekerjaan, pendidikan, unit kerja) untuk data pengguna] ======
+        const pipeline = [
             { $match: filter },
+
             {
                 $lookup: {
-                    from: 'master_agama',
-                    localField: 'master_agama_id',
+                    from: 'master_jeniskelamin',
+                    localField: 'master_jk_id',
                     foreignField: 'id',
-                    as: 'master_agama_info'
+                    as: 'jenis_kelamin'
                 }
             },
             {
@@ -171,7 +170,7 @@ router.post('/getView', async (req, res, next) => {
                     from: 'master_pekerjaan',
                     localField: 'master_pekerjaan_id',
                     foreignField: 'id',
-                    as: 'master_pekerjaan_info'
+                    as: 'pekerjaan'
                 }
             },
             {
@@ -179,7 +178,7 @@ router.post('/getView', async (req, res, next) => {
                     from: 'master_pendidikan',
                     localField: 'master_pendidikan_id',
                     foreignField: 'id',
-                    as: 'master_pendidikan_info'
+                    as: 'pendidikan'
                 }
             },
             {
@@ -187,36 +186,31 @@ router.post('/getView', async (req, res, next) => {
                     from: 'unit_kerja',
                     localField: 'master_unit_kerja_id',
                     foreignField: 'id',
-                    as: 'master_unit_kerja_info'
+                    as: 'unit_kerja'
                 }
+            },
+
+            {
+                $unwind: { path: '$jenis_kelamin', preserveNullAndEmptyArrays: true }
             },
             {
-                $addFields: {
-                    master_agama_uraian: {
-                        $ifNull: [{ $arrayElemAt: ['$master_agama_info.uraian', 0] }, null]
-                    },
-                    master_pekerjaan_uraian: {
-                        $ifNull: [{ $arrayElemAt: ['$master_pekerjaan_info.uraian', 0] }, null]
-                    },
-                    master_pendidikan_uraian: {
-                        $ifNull: [{ $arrayElemAt: ['$master_pendidikan_info.uraian', 0] }, null]
-                    },
-                    master_unit_kerja_uraian: {
-                        $ifNull: [{ $arrayElemAt: ['$master_unit_kerja_info.unit_kerja', 0] }, null]
-                    }
-                }
+                $unwind: { path: '$pekerjaan', preserveNullAndEmptyArrays: true }
             },
             {
-                $project: {
-                    master_agama_info: 0,
-                    master_pekerjaan_info: 0,
-                    master_pendidikan_info: 0,
-                    master_unit_kerja_info: 0
-                }
+                $unwind: { path: '$pendidikan', preserveNullAndEmptyArrays: true }
             },
+            {
+                $unwind: { path: '$unit_kerja', preserveNullAndEmptyArrays: true }
+            },
+
+            // Pagination
             { $skip: skip },
             { $limit: limitNumber }
-        ]).toArray();
+        ];
+
+        const total = await colUsers.countDocuments(filter); // total data
+        const users = await colUsers.aggregate(pipeline).toArray();
+        // ====== [END MODIFIKASI: Lookup relasi pengguna] ======
 
         res.json({
             currentPage: pageNumber,
