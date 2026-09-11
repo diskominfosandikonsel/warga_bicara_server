@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>REKAPITULASI REGISTER PENGADUAN WARGA BICARA</title>
+<style>
+  @page { 
+    size: portrait; 
+    margin: 12mm 10mm 12mm 10mm; 
+  }
+  * { box-sizing: border-box; }
+  body { 
+    font-family: 'Segoe UI', Arial, sans-serif; 
+    font-size: 9.5px; 
+    color: #1e293b; 
+    margin: 0; 
+    padding: 10px; 
+    background: #fff; 
+    line-height: 1.35;
+  }
+  .sheet { max-width: 100%; margin: 0 auto; }
+  .header-table { width: 100%; border-bottom: 2.5px double #0f172a; padding-bottom: 8px; margin-bottom: 12px; }
+  .header-table td { vertical-align: middle; }
+  .title-cell { text-align: center; line-height: 1.3; }
+  .title-cell h3 { margin: 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #334155; }
+  .title-cell h2 { margin: 2px 0; font-size: 15px; font-weight: 800; text-transform: uppercase; color: #0f172a; }
+  .title-cell p { margin: 2px 0; font-size: 10px; color: #475569; }
+  
+  .badge-info-box { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 12px; 
+    background: #f8fafc; 
+    padding: 8px 12px; 
+    border-radius: 5px; 
+    border-left: 3.5px solid #0284c7; 
+    font-size: 9.5px; 
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+  .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 4px; text-align: center; }
+  .stat-num { font-size: 15px; font-weight: 800; color: #0f172a; }
+  .stat-label { font-size: 8px; color: #64748b; text-transform: uppercase; font-weight: 600; }
+
+  table.data-table { width: 100%; border-collapse: collapse; margin-top: 6px; table-layout: fixed; }
+  table.data-table th, table.data-table td { 
+    border: 1px solid #cbd5e1; 
+    padding: 5px 6px; 
+    text-align: left; 
+    vertical-align: top; 
+    word-wrap: break-word;
+  }
+  table.data-table th { 
+    background: #0f172a; 
+    color: #ffffff; 
+    font-size: 9px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.3px; 
+    text-align: center; 
+  }
+  table.data-table tr:nth-child(even) { background: #f8fafc; }
+  table.data-table tr { page-break-inside: avoid; }
+
+  .badge { display: inline-block; padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; text-align: center; }
+  .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .badge-warning { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+  .badge-primary { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+  .badge-danger { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+  .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+
+  .print-btn-bar { margin-bottom: 12px; text-align: right; }
+  .btn-print { background: #0284c7; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .btn-print:hover { background: #0369a1; }
+  
+  .signature-table { width: 100%; margin-top: 25px; page-break-inside: avoid; font-size: 9.5px; }
+  .signature-table td { width: 33.3%; text-align: center; vertical-align: top; }
+
+  @media print {
+    body { padding: 0; }
+    .print-btn-bar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="print-btn-bar">
+    <button class="btn-print" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF (A4 Portrait)</button>
+  </div>
+
+  <table class="header-table">
+    <tr>
+      <td class="title-cell">
+        <h3>PEMERINTAH KABUPATEN KONAWE SELATAN</h3>
+        <h2>DINAS KOMUNIKASI, INFORMATIKA DAN PERSANDIAN</h2>
+        <p>Sistem Pengelolaan Pengaduan Pelayanan Publik Berbasis Android "Warga Bicara"</p>
+        <p><strong>LOG REGISTER & REKAPITULASI DATA PENGADUAN WARGA</strong></p>
+      </td>
+    </tr>
+  </table>
+
+  <div class="badge-info-box">
+    <div>
+      <strong>Instansi Pengelola:</strong> Dinas Komunikasi, Informatika dan Persandian Kab. Konawe Selatan<br>
+      <strong>Sistem Sumber:</strong> Database MongoDB Server "Warga Bicara"
+    </div>
+    <div style="text-align: right;">
+      <strong>Tanggal Cetak:</strong> Kamis, 10 September 2026 pukul 11.01 WITA<br>
+      <strong>Total Aduan:</strong> 8 Laporan Terdaftar
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-num">8</div>
+      <div class="stat-label">Total Masuk</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color: #15803d;">5</div>
+      <div class="stat-label">Selesai</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color: #7e22ce;">1</div>
+      <div class="stat-label">Tindak Lanjut</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color: #b91c1c;">2</div>
+      <div class="stat-label">Ditolak</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color: #0369a1;">0</div>
+      <div class="stat-label">Menunggu / Delegasi</div>
+    </div>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 25px;">No</th>
+        <th style="width: 120px;">No. Tiket & Pelapor</th>
+        <th style="width: 175px;">Pengaduan & Lokasi</th>
+        <th style="width: 110px;">OPD & Status</th>
+        <th>Tindak Lanjut & Bukti Penyelesaian</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+          <td style="text-align: center; font-weight: bold;">1</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby17qmo1003qg</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">09/12/2025, 12.47.37</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>HARMAN (Anonim)</strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7471010806950003</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 082291662895</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Kebakaran desa alebo</strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">Keamanan & Ketertiban</span> 
+            <span style="font-size: 8px; color: #64748b;">&raquo; Lingkungan</span><br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Kebakaran desa alebo kec konda</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Alebo, Kecamatan Konda
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (1):</strong> 1776314857110.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">DINAS PEMADAM KEBAKARAN DAN PENYELAMATAN</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-success">Selesai / Tuntas</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <div style="line-height: 1.35;">[09/12/2025, 13.21.25] SELESAI</div>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">2</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby17qmo1fd1rt</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">07/01/2026, 19.57.35</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>Nur Tri Septianingsih</strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7471095409060003</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 082291662895</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Tertibkan ODGJ</strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">Keamanan & Ketertiban</span> 
+            <span style="font-size: 8px; color: #64748b;">&raquo; Tantribum</span><br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Ada ODGJ di desa rambu-rambu. Tolong di tertibkan 🙏🏻</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Rambu-Rambu, Kecamatan Laeya
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (1):</strong> 1776340655015.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">SATUAN POLISI PAMONG PRAJA</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-success">Selesai / Tuntas</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <div style="line-height: 1.35;">[07/01/2026, 20.12.33] SUDAH TERTANGANI</div>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">3</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby17qmo1h4o2h</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">07/01/2026, 20.47.03</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>Agusti</strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7471097112950001</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 085329379090</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Hewan ternak</strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">Keamanan & Ketertiban</span> 
+            <span style="font-size: 8px; color: #64748b;">&raquo; Lingkungan</span><br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Sapi masuk pekarangan</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Andoolo, Kecamatan Andoolo
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (1):</strong> 1776343623240.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">SATUAN POLISI PAMONG PRAJA</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-success">Selesai / Tuntas</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <div style="line-height: 1.35;">[21/01/2026, 20.52.43] PENYELESAIAN DI KANTOR BALAI DAN PENERTIBAN HEWAN TERNAK</div>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">4</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby17qmo6n1je3</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">22/02/2026, 11.31.26</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>Muh. Irham Alamsyah</strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7405031010980004</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 082293226093</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Pohon Tumbang</strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">Keamanan & Ketertiban</span> 
+            <span style="font-size: 8px; color: #64748b;">&raquo; Lingkungan</span><br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Pohon tumbang di dinas kominfo</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Potoro, Kecamatan Andoolo
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (2):</strong> 1776655885885.jpg, 1776655886150.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">DINAS PEMADAM KEBAKARAN DAN PENYELAMATAN</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-success">Selesai / Tuntas</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <div style="line-height: 1.35;">[22/02/2026, 11.35.17] DITANGANI</div>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">5</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby2ae3lmrx7dbcf</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">23/07/2026, 15.41.35</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>AGUS</strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7405200308990002</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 085337903338</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Infrastruktur</strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">Infrastruktur</span> 
+            <span style="font-size: 8px; color: #64748b;">&raquo; Jalan Rusak</span><br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Yth. Bupati Konawe Selatan
+Yth. Forkopimda Konawe Selatan
+Yth. DPRD Konawe Selatan
+
+Mohon  juga di lakukan tindakan cepat untuk Jalan Ruas Matabubu-Alangga. Penghubung Dapil 1&6. Penghubung antar kecamatan, antar desa. Jalan yang Sejak dulu digunakan tak kunjung perbaikan. Desa lain yang baru terbentuk sudah menghitam, desa yang sejak dulu tak kunjung mendapat perhatian..... 
+
+
+Salam Hormat. Agus, S.E Pemuda Desa Matabubu.</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. -, -
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (3):</strong> 1784792494807.jpg, 1784792495240.jpg, 1784792495241.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">DINAS PEKERJAAN UMUM DAN TATA RUANG</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-purple">Dalam Proses / Tindak Lanjut OPD</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <div style="line-height: 1.35;">[29/07/2026, 22.15.10] -</div>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">6</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby24h7msstp578</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">14/08/2026, 18.47.30</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>Robin haikal </strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7405042707030003</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 082248140419</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">BANGUNAN LIAR DI ATAS BADAN JALAN </strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">-</span> 
+            <br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Mohon penertertibkan bangunan liar yang di bangun bahu jalan raya karena sangat menggangu para pengguna jalan. bagunan ini nyaris berdiri di atas jalan aspal dan di jadikan sebagai tempat usaha. Tiang listrik PLN dan tiang internet di bungkus di dalam banguna tersebut. Selama ini tidak ada sama sekali teguran dari pemerintah setempat atas banguna liar ini.
+Semoga ada tindak lanjut dari pemerintah daerah. Bangunan ini berada di Jl. 40 Brigjend Katamso, Perempatan Brimob Polda Sultra, Puosu Jaya, Kec. Konda, Kabupaten Konawe Selatan. Semoga jadi perhatian pemerintah setempat.
+Terima kasih atas perhatiannya.</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Watubangga, -
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (2):</strong> 1786704450055.jpg, 1786704450389.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">Belum Didelegasikan</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-danger">Ditolak Admin Daerah</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <em style="color: #94a3b8;">Belum ada catatan tindak lanjut</em>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">7</td>
+          <td>
+            <strong style="color: #0284c7;">#42wby24h7mt0tbkt1</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">20/08/2026, 08.59.06</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>Robin haikal </strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7405042707030003</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 082248140419</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Bangunan liar </strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">-</span> 
+            <br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Mohon penertertibkan bangunan liar yang di bangun bahu jalan raya karena sangat menggangu para pengguna jalan. bagunan ini nyaris berdiri di atas jalan aspal dan di jadikan sebagai tempat usaha. Tiang listrik PLN dan tiang internet di bungkus di dalam banguna tersebut. Selama ini tidak ada sama sekali teguran dari pemerintah setempat atas banguna liar ini.
+Semoga ada tindak lanjut dari pemerintah daerah. Bangunan ini berada di Jl. 40 Brigjend Katamso, Perempatan Brimob Polda Sultra, Puosu Jaya, Kec. Konda, Kabupaten Konawe Selatan. Semoga jadi perhatian pemerintah setempat.
+Terima kasih atas perhatiannya</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Watubangga, -
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (2):</strong> 1787187546411.jpg, 1787187546742.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">Belum Didelegasikan</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-danger">Ditolak Admin Daerah</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <em style="color: #94a3b8;">Belum ada catatan tindak lanjut</em>
+          </td>
+        </tr><tr>
+          <td style="text-align: center; font-weight: bold;">8</td>
+          <td>
+            <strong style="color: #0284c7;">#42wbymlftmtkxcm9j</strong><br>
+            <span style="color: #64748b; font-size: 8.5px;">03/09/2026, 10.47.17</span><br>
+            <hr style="margin: 3px 0; border: none; border-top: 1px dashed #cbd5e1;">
+            <strong>Robin haikal  (Anonim)</strong><br>
+            <span style="font-size: 8px; color: #475569;">NIK: 7405042707030003</span><br>
+            <span style="font-size: 8px; color: #475569;">HP: 082248140419</span>
+          </td>
+          <td>
+            <strong style="color: #0f172a; font-size: 10px;">Bangunan liar di atas bahu jalan</strong><br>
+            <span style="font-size: 8.5px; color: #0369a1; font-weight: 600;">Keamanan & Ketertiban</span> 
+            <span style="font-size: 8px; color: #64748b;">&raquo; Bangunan Liar</span><br>
+            <div style="margin: 3px 0; font-size: 9px; white-space: pre-wrap;">Mohon penertertibkan bangunan liar yang di bangun bahu jalan raya karena sangat menggangu para pengguna jalan. bagunan ini nyaris berdiri di atas jalan aspal dan di jadikan sebagai tempat usaha. Tiang listrik PLN dan tiang internet di bungkus di dalam banguna tersebut. Selama ini tidak ada sama sekali teguran dari pemerintah setempat atas banguna liar ini.
+Semoga ada tindak lanjut dari pemerintah daerah. Bangunan ini berada di Jl. 40 Brigjend Katamso, Perempatan Brimob Polda Sultra, Puosu Jaya, Kec. Konda, Kabupaten Konawe Selatan. Semoga jadi perhatian pemerintah setempat.
+Terima kasih atas perhatiannya</div>
+            <div style="font-size: 8px; color: #475569; margin-top: 2px;">
+              <strong>Lokasi:</strong> Ds. Watubangga, -
+            </div>
+            <div style="font-size: 7.5px; color: #64748b; margin-top: 2px;"><strong>Foto Bukti (2):</strong> 1788403635450.jpg, 1788403636607.jpg</div>
+          </td>
+          <td>
+            <strong style="color: #1e293b; font-size: 9px;">SATUAN POLISI PAMONG PRAJA</strong><br>
+            <div style="margin-top: 4px;">
+              <span class="badge badge-success">Selesai / Tuntas</span>
+            </div>
+          </td>
+          <td style="font-size: 8.5px;">
+            <div style="line-height: 1.35;">[08/09/2026, 09.20.56] Petugas Satuan Polisi Pamong Praja (Satpol PP) telah turun langsung meninjau lokasi bangunan yang diduga melanggar ketentuan karena sebagian bangunan telah melewati batas bahu jalan.
+
+Menindaklanjuti hasil peninjauan tersebut, Kepala Bidang Ketenteraman dan Ketertiban Umum (Trantibum) bersama Kepala Bidang Perlindungan Masyarakat (Linmas) telah berkoordinasi dengan Pemerintah Kecamatan Konda. Selanjutnya, melalui Pemerintah Desa Puosu Jaya, pemilik bangunan akan diberikan teguran secara lisan serta Surat Peringatan (SP) I sebagai bentuk pembinaan dan pemberian kesempatan kepada pemilik untuk melakukan penyesuaian secara sukarela.
+
+Apabila teguran dan SP I tidak mendapat tanggapan, maka akan dilanjutkan dengan pemberian SP II dan SP III sesuai dengan tahapan yang berlaku. 
+Namun, apabila setelah seluruh tahapan tersebut tidak terdapat itikad baik dari pemilik bangunan untuk melakukan penyesuaian, maka Pemerintah Kecamatan Konda bersama petugas Satpol PP akan mengambil langkah penindakan sesuai dengan ketentuan peraturan yang berlaku.</div>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+  <table class="signature-table">
+    <tr>
+      <td>
+        Mengetahui,<br>
+        <strong>Kepala Dinas Kominfo dan Persandian<br>Kabupaten Konawe Selatan</strong>
+        <br><br><br><br>
+        <strong><u>............................................................</u></strong><br>
+        NIP. .....................................................
+      </td>
+      <td></td>
+      <td>
+        Andoolo, 10 September 2026<br>
+        <strong>Admin Pengelola Aplikasi Warga Bicara</strong>
+        <br><br><br><br>
+        <strong><u>............................................................</u></strong><br>
+        NIP. .....................................................
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>
