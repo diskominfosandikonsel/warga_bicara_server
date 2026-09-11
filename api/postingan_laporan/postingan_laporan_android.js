@@ -259,6 +259,7 @@ router.post('/viewData', async (req, res, next) => {
                 id: 1,
                 master_unit_kerja_id: 1,
                 status: 1,
+                created_at: 1, // [MODIFIKASI: created_at disertakan untuk keperluan timeline series tanggal disposisi]
                 "unit_kerja.id": 1,
                 "unit_kerja.unit_kerja": 1
               }

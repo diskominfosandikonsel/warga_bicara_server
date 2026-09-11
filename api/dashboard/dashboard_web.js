@@ -1225,6 +1225,7 @@ router.post('/total_laporan_by_status', async (req, res) => {
                 id: 1,
                 master_unit_kerja_id: 1,
                 status: 1,
+                created_at: 1, // [MODIFIKASI: created_at disertakan untuk keperluan timeline series tanggal disposisi]
                 "unit_kerja.id": 1,
                 "unit_kerja.unit_kerja": 1
               }
