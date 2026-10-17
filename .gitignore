@@ -146,3 +146,6 @@ uploads/.DS_Store
 dummy_json/
 dummy_json/**
 firebase-service-account.json
+
+
+env.txt
