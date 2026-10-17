@@ -153,6 +153,8 @@ router.post('/getView', async (req, res, next) => {
     
 
     try {
+        const colUsers = await getCollection('users');
+
         // ====== [MODIFIKASI: Lookup relasi master data (jenis kelamin, pekerjaan, pendidikan, unit kerja) untuk data pengguna] ======
         const pipeline = [
             { $match: filter },
